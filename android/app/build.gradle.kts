@@ -9,8 +9,7 @@ plugins {
 
 android {
     namespace = "com.piec.app.piec"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,7 +19,7 @@ android {
     defaultConfig {
         applicationId = "com.piec.app.piec"
         minSdk = 23
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
