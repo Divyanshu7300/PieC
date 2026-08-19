@@ -433,6 +433,7 @@ class ProfileScreen extends StatelessWidget {
                   const Divider(color: AppColors.surfaceLight, height: 16),
 
                   ListTile(
+                    tileColor: Colors.transparent,
                     contentPadding: EdgeInsets.zero,
                     leading: Container(
                       padding: const EdgeInsets.all(8),

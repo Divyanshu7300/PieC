@@ -157,6 +157,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           : '';
 
                       return ListTile(
+                        tileColor: Colors.transparent,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         onTap: () {
                           Navigator.push(

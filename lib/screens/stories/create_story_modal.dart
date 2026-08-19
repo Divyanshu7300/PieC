@@ -209,6 +209,7 @@ class _CreateStoryModalState extends State<CreateStoryModal> {
 
                   // 4. Spatial Map Geo-Drop Tag
                   SwitchListTile(
+                    tileColor: Colors.transparent,
                     contentPadding: EdgeInsets.zero,
                     title: const Text('📍 Pin Story on World Map (Geo-Drop)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: const Text(

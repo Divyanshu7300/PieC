@@ -764,6 +764,7 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
                       itemBuilder: (context, index) {
                         final result = _searchResults[index];
                         return ListTile(
+                          tileColor: Colors.transparent,
                           dense: true,
                           leading: const Icon(Icons.location_pin, color: AppColors.primaryNeon, size: 20),
                           title: Text(

@@ -157,6 +157,7 @@ class _CreateSquadModalState extends State<CreateSquadModal> {
                       ),
                     ),
                     child: SwitchListTile(
+                      tileColor: Colors.transparent,
                       contentPadding: EdgeInsets.zero,
                       title: Row(
                         children: const [

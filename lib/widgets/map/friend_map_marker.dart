@@ -66,8 +66,12 @@ class _FriendMapMarkerState extends State<FriendMapMarker>
         builder: (context, child) {
           return Transform.scale(
             scale: widget.isSelected ? 1.18 : _scaleAnimation.value,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: OverflowBox(
+              maxHeight: double.infinity,
+              maxWidth: double.infinity,
+              alignment: Alignment.bottomCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
               children: [
                 // Top Tag Pill (Name + Battery % / Beacon)
                 Container(
@@ -178,6 +182,7 @@ class _FriendMapMarkerState extends State<FriendMapMarker>
                 ),
               ],
             ),
+          ),
           );
         },
       ),
