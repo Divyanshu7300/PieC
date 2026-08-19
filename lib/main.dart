@@ -79,24 +79,20 @@ class PieCApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final auth = Provider.of<AuthService>(context);
     final themeService = Provider.of<ThemeService>(context);
 
-    // If user logs in later, initialize chats
-    if (auth.currentUser != null) {
-      final chatService = Provider.of<ChatService>(context, listen: false);
-      if (chatService.friends.isEmpty) {
-        chatService.init(auth.currentUser!.id);
-      }
-    }
+    final isAuthenticated = firebaseAuth.isLoggedIn || auth.isAuthenticated;
 
     return MaterialApp(
       title: 'PieC Spatial - Gamified Map & E2EE Chat',
       debugShowCheckedModeBanner: false,
       theme: themeService.currentThemeData,
-      home: auth.isAuthenticated
+      home: isAuthenticated
           ? const MainNavigationScreen()
           : const LoginScreen(),
     );
   }
 }
+

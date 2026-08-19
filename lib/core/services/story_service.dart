@@ -32,84 +32,16 @@ class StoryService extends ChangeNotifier {
         final List decoded = jsonDecode(data);
         _stories = decoded.map((s) => StoryModel.fromMap(s)).toList();
       } catch (_) {
-        _populateDefaultInitialStories(currentUser, chatService);
+        _stories = [];
       }
     } else {
-      _populateDefaultInitialStories(currentUser, chatService);
+      _stories = [];
     }
 
     notifyListeners();
   }
 
-  void _populateDefaultInitialStories(UserModel? currentUser, ChatService chatService) {
-    final friends = chatService.friends;
-    final sophiaList = friends.where((f) => f.id == 'friend_sophia').toList();
-    final alexList = friends.where((f) => f.id == 'friend_alex').toList();
-    final liamList = friends.where((f) => f.id == 'friend_liam').toList();
-
-    _stories = [
-      if (sophiaList.isNotEmpty)
-        StoryModel(
-          id: 'story_sophia_1',
-          userId: sophiaList.first.id,
-          user: sophiaList.first,
-          sceneType: AvatarSceneType.gamingRig,
-          caption: 'Grinding new 3D spatial map levels! Who is down for squad match? 🎮⚡',
-          musicTrack: 'Cyberpunk Neon Pulse 🎵',
-          locationPoint: LocationPoint(
-            title: 'Design Matrix HQ',
-            address: 'Cyber Tech Park Level 7',
-            latitude: 28.6240,
-            longitude: 77.2110,
-            type: LocationType.office,
-            updatedAt: DateTime.now(),
-          ),
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-          reactions: {'me': '🔥'},
-        ),
-      if (alexList.isNotEmpty)
-        StoryModel(
-          id: 'story_alex_1',
-          userId: alexList.first.id,
-          user: alexList.first,
-          sceneType: AvatarSceneType.cafeCoffee,
-          caption: 'Morning brew at the rooftop ☕ Check out my 3D outfit glow ✨',
-          musicTrack: 'Lo-Fi Tokyo Chill 🎵',
-          locationPoint: LocationPoint(
-            title: "Alex's Penthouse",
-            address: 'Skyline Tower, Apt 402',
-            latitude: 28.6180,
-            longitude: 77.2140,
-            type: LocationType.home,
-            updatedAt: DateTime.now(),
-          ),
-          createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-          reactions: {'me': '❤️'},
-        ),
-      if (liamList.isNotEmpty)
-        StoryModel(
-          id: 'story_liam_1',
-          userId: liamList.first.id,
-          user: liamList.first,
-          sceneType: AvatarSceneType.carDrive,
-          caption: 'Night highway cruising with cyber synthwave vibes on repeat 🚗💨',
-          musicTrack: 'Midnight Expressway Synth 🎵',
-          locationPoint: LocationPoint(
-            title: 'Central Highway Mile 18',
-            address: 'Expressway Route 4',
-            latitude: 28.6165,
-            longitude: 77.2070,
-            type: LocationType.hangout,
-            updatedAt: DateTime.now(),
-          ),
-          createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-        ),
-    ];
-
-    _save();
-  }
-
-  Future<void> postStory({
+  Future<StoryModel> postStory({
     required UserModel currentUser,
     required AvatarSceneType sceneType,
     required String caption,
@@ -119,7 +51,7 @@ class StoryService extends ChangeNotifier {
     Duration duration = const Duration(hours: 24),
   }) async {
     final newStory = StoryModel(
-      id: 'story_${_uuid.v4().substring(0, 8)}',
+      id: 'story_${_uuid.v4()}',
       userId: currentUser.id,
       user: currentUser,
       sceneType: sceneType,
@@ -133,36 +65,62 @@ class StoryService extends ChangeNotifier {
 
     _stories.insert(0, newStory);
     notifyListeners();
-    await _save();
+    await _saveStories();
+    return newStory;
   }
 
-  void markStoryAsViewed(String storyId) {
-    final index = _stories.indexWhere((s) => s.id == storyId);
-    if (index != -1 && !_stories[index].isViewed) {
-      _stories[index] = _stories[index].copyWith(isViewed: true);
-      notifyListeners();
-      _save();
-    }
+  Future<StoryModel> createStory({
+    required UserModel currentUser,
+    required AvatarSceneType sceneType,
+    required String caption,
+    String? musicTrack,
+    LocationPoint? locationPoint,
+    int expiryHours = 24,
+  }) =>
+      postStory(
+        currentUser: currentUser,
+        sceneType: sceneType,
+        caption: caption,
+        musicTrack: musicTrack,
+        locationPoint: locationPoint,
+        duration: Duration(hours: expiryHours),
+      );
+
+  Future<void> deleteStory(String storyId) async {
+    _stories.removeWhere((s) => s.id == storyId);
+    notifyListeners();
+    await _saveStories();
   }
 
-  void reactToStory(String storyId, String emoji, String currentUserId) {
+  void markStoryAsViewed(String storyId, [String currentUserId = 'me']) {
     final index = _stories.indexWhere((s) => s.id == storyId);
     if (index != -1) {
-      final updatedReactions = Map<String, String>.from(_stories[index].reactions);
-      updatedReactions[currentUserId] = emoji;
-      _stories[index] = _stories[index].copyWith(reactions: updatedReactions);
-      notifyListeners();
-      _save();
+      final viewers = List<String>.from(_stories[index].viewers);
+      if (!viewers.contains(currentUserId)) {
+        viewers.add(currentUserId);
+        _stories[index] = _stories[index].copyWith(viewers: viewers, isViewed: true);
+        notifyListeners();
+        _saveStories();
+      }
     }
   }
 
-  List<StoryModel> getStoriesForMap() {
-    return _stories.where((s) => s.locationPoint != null).toList();
+  void reactToStory(String storyId, String currentUserId, String emoji) {
+    final index = _stories.indexWhere((s) => s.id == storyId);
+    if (index != -1) {
+      final reactions = Map<String, String>.from(_stories[index].reactions);
+      reactions[currentUserId] = emoji;
+      _stories[index] = _stories[index].copyWith(reactions: reactions);
+      notifyListeners();
+      _saveStories();
+    }
   }
 
-  Future<void> _save() async {
+  void addReaction(String storyId, String userId, String emoji) => reactToStory(storyId, userId, emoji);
+
+  Future<void> _saveStories() async {
     final prefs = await SharedPreferences.getInstance();
-    final list = _stories.map((s) => s.toMap()).toList();
-    await prefs.setString(_keyStories, jsonEncode(list));
+    final data = jsonEncode(_stories.map((s) => s.toMap()).toList());
+    await prefs.setString(_keyStories, data);
   }
 }

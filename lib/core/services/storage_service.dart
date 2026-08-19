@@ -53,6 +53,26 @@ class StorageService {
     }
   }
 
+  static const String _keyFriendsPrefix = 'piec_friends_';
+
+  Future<void> saveFriends(String currentUserId, List<UserModel> friends) async {
+    final prefs = await SharedPreferences.getInstance();
+    final listJson = friends.map((f) => f.toMap()).toList();
+    await prefs.setString('$_keyFriendsPrefix$currentUserId', jsonEncode(listJson));
+  }
+
+  Future<List<UserModel>> getFriends(String currentUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString('$_keyFriendsPrefix$currentUserId');
+    if (data == null || data.isEmpty) return [];
+    try {
+      final List decoded = jsonDecode(data);
+      return decoded.map<UserModel>((f) => UserModel.fromMap(f as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> setGhostMode(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyGhostMode, enabled);

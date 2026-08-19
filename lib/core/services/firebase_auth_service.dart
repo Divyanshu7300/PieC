@@ -139,6 +139,74 @@ class FirebaseAuthService extends ChangeNotifier {
     return doc.exists && doc.data()?['name'] != null;
   }
 
+  // Sign in with Email & Password
+  Future<bool> signInWithEmail(String email, String password) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final result = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      _firebaseUser = result.user;
+      if (_firebaseUser != null) {
+        await _loadUserProfile(_firebaseUser!.uid);
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = e.message ?? 'Login failed. Check your email and password.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Register with Email & Password
+  Future<bool> signUpWithEmail({
+    required String email,
+    required String password,
+    required String name,
+    String? phone,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      _firebaseUser = result.user;
+      if (_firebaseUser != null) {
+        await saveUserProfile(
+          name: name.trim().isEmpty ? 'PieC User' : name.trim(),
+          phone: phone ?? '',
+        );
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = e.message ?? 'Registration failed.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
     _currentUser = null;

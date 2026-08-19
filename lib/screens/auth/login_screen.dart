@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/avatar_config.dart';
-import 'package:piec/core/services/auth_service.dart';
 import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/screens/auth/otp_screen.dart';
+import 'package:piec/screens/auth/setup_profile_screen.dart';
 import 'package:piec/screens/main_navigation_screen.dart';
 import 'package:piec/widgets/avatar/gamified_avatar.dart';
 import 'package:provider/provider.dart';
@@ -16,18 +16,26 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  int _selectedTab = 0; // 0: Mobile OTP, 1: Email & Password
+  bool _isSignUp = false;
+
   final TextEditingController _phoneController = TextEditingController();
-  bool _isPhoneMode = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthService>(context);
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context);
 
     return Scaffold(
       body: SafeArea(
@@ -36,11 +44,11 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
-              // Glowing App Badge & Logo
+              // Glowing App Avatar Badge
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const RadialGradient(
@@ -48,9 +56,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryNeon.withOpacity(0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
+                      color: AppColors.primaryNeon.withOpacity(0.25),
+                      blurRadius: 24,
+                      spreadRadius: 4,
                     ),
                   ],
                 ),
@@ -68,243 +76,283 @@ class _LoginScreenState extends State<LoginScreen> {
                     auraEffect: AvatarAuraEffect.none,
                     glowColorHex: 0xFF00F0FF,
                   ),
-                  size: 90,
+                  size: 76,
                   showGlow: false,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // Title & Branding
+              // App Name
               ShaderMask(
-                shaderCallback: (bounds) =>
-                    AppColors.primaryGradient.createShader(bounds),
+                shaderCallback: (bounds) => AppColors.primaryGradient.createShader(bounds),
                 child: const Text(
                   'PieC Spatial',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
                     letterSpacing: -0.5,
+                    color: Colors.white,
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               const Text(
-                'Gamified Map & End-to-End Encrypted Chat',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
+                'Live 3D Map, E2EE Encrypted Chat & Safety Sentinel',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
-              // Feature Highlights Card
+              // Method Switcher (Phone vs Email)
               Container(
-                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.surfaceLight),
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Column(
+                padding: const EdgeInsets.all(4),
+                child: Row(
                   children: [
-                    _buildFeatureItem(
-                      '🗺️',
-                      'Snap Map Spatial Hangout',
-                      'Visit friends at Home, Office or Live spots',
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTab = 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedTab == 0 ? AppColors.surface : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _selectedTab == 0
+                                ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.phone_android_rounded, size: 16, color: AppColors.primaryNeon),
+                              SizedBox(width: 6),
+                              Text('Mobile OTP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    const Divider(color: AppColors.surfaceLight, height: 20),
-                    _buildFeatureItem(
-                      '👾',
-                      'Interactive 3D Avatars',
-                      'Gamified models reacting live to your chats',
-                    ),
-                    const Divider(color: AppColors.surfaceLight, height: 20),
-                    _buildFeatureItem(
-                      '🔒',
-                      'Zero-Knowledge E2EE',
-                      'AES-256 military-grade encrypted messaging',
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTab = 1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedTab == 1 ? AppColors.surface : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _selectedTab == 1
+                                ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.email_rounded, size: 16, color: AppColors.primaryNeon),
+                              SizedBox(width: 6),
+                              Text('Email / Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 36),
+              const SizedBox(height: 20),
 
-              // Sign In Options
-              if (!_isPhoneMode) ...[
-                // Google Sign In Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: auth.isLoading
-                        ? null
-                        : () async {
-                            final success = await auth.signInWithGoogle();
-                            if (success && mounted) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const MainNavigationScreen(),
-                                ),
-                              );
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.network(
-                          'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                          height: 22,
-                          width: 22,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.g_mobiledata_rounded,
-                            color: Colors.red,
-                            size: 26,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Continue with Google (Gmail)',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+              // Tab 0: Phone OTP
+              if (_selectedTab == 0) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: const Text(
+                    'Enter Phone Number 📱',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                   ),
                 ),
-
-                const SizedBox(height: 14),
-
-                // Phone Login Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => _isPhoneMode = true),
-                    icon: const Icon(Icons.phone_iphone_rounded, color: AppColors.primaryNeon),
-                    label: const Text('Continue with Mobile Number'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: AppColors.surfaceHover, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                // Phone Number Input Form
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    const Text(
-                      'Enter Phone Number',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondary,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.surfaceHover),
                       ),
+                      child: const Text('🇮🇳 +91', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceLight,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.surfaceHover),
-                          ),
-                          child: const Text(
-                            '🇮🇳 +91',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              hintText: '98765 43210',
-                              prefixIcon: Icon(Icons.phone_rounded, color: AppColors.textMuted),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: auth.isLoading
-                            ? null
-                            : () async {
-                                final phone = '+91${_phoneController.text.trim()}';
-                                if (_phoneController.text.trim().isEmpty || _phoneController.text.trim().length < 10) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please enter a valid 10-digit number')),
-                                  );
-                                  return;
-                                }
-                                final firebaseAuth = Provider.of<FirebaseAuthService>(context, listen: false);
-                                await firebaseAuth.sendOtp(phone);
-                                if (mounted) {
-                                  if (firebaseAuth.errorMessage != null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: ${firebaseAuth.errorMessage}')),
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => OtpScreen(phoneNumber: phone),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                        child: auth.isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Send OTP Code 🚀'),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => setState(() => _isPhoneMode = false),
-                        child: const Text(
-                          '← Back to other login methods',
-                          style: TextStyle(color: AppColors.textSecondary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          hintText: '98765 43210',
+                          prefixIcon: Icon(Icons.phone_rounded, color: AppColors.textMuted),
                         ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: firebaseAuth.isLoading
+                        ? null
+                        : () async {
+                            final rawPhone = _phoneController.text.trim();
+                            if (rawPhone.isEmpty || rawPhone.length < 10) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a valid 10-digit phone number')),
+                              );
+                              return;
+                            }
+                            final phone = '+91$rawPhone';
+                            await firebaseAuth.sendOtp(phone);
+                            if (mounted) {
+                              if (firebaseAuth.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Firebase Error: ${firebaseAuth.errorMessage}')),
+                                );
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OtpScreen(phoneNumber: phone),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    child: firebaseAuth.isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Send SMS OTP 🚀', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                ),
               ],
 
-              const SizedBox(height: 24),
+              // Tab 1: Email & Password
+              if (_selectedTab == 1) ...[
+                if (_isSignUp) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: const Text('Your Full Name 👤', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Divyanshu Nagar',
+                      prefixIcon: Icon(Icons.person_rounded, color: AppColors.textMuted),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: const Text('Email Address ✉️', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    hintText: 'name@example.com',
+                    prefixIcon: Icon(Icons.email_rounded, color: AppColors.textMuted),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: const Text('Password 🔐', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    hintText: '••••••••',
+                    prefixIcon: Icon(Icons.lock_rounded, color: AppColors.textMuted),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: firebaseAuth.isLoading
+                        ? null
+                        : () async {
+                            final email = _emailController.text.trim();
+                            final password = _passwordController.text.trim();
+                            if (email.isEmpty || password.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter both email and password')),
+                              );
+                              return;
+                            }
+                            if (_isSignUp) {
+                              final name = _nameController.text.trim();
+                              final success = await firebaseAuth.signUpWithEmail(
+                                email: email,
+                                password: password,
+                                name: name,
+                              );
+                              if (success && mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const SetupProfileScreen()),
+                                );
+                              } else if (mounted && firebaseAuth.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(firebaseAuth.errorMessage!)),
+                                );
+                              }
+                            } else {
+                              final success = await firebaseAuth.signInWithEmail(email, password);
+                              if (success && mounted) {
+                                final isComplete = await firebaseAuth.isProfileComplete();
+                                if (!mounted) return;
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => isComplete
+                                        ? const MainNavigationScreen()
+                                        : const SetupProfileScreen(),
+                                  ),
+                                );
+                              } else if (mounted && firebaseAuth.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(firebaseAuth.errorMessage!)),
+                                );
+                              }
+                            }
+                          },
+                    child: firebaseAuth.isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : Text(_isSignUp ? 'Create New Account 🚀' : 'Sign In 🔑', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                  child: Text(
+                    _isSignUp
+                        ? 'Already have an account? Sign In'
+                        : "Don't have an account? Sign Up",
+                    style: const TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
               const Text(
-                'By continuing, your chats are secured with client-side E2EE.',
+                '100% Client-Side AES-256 E2EE Protected & Zero Knowledge Architecture.',
                 style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                 textAlign: TextAlign.center,
               ),
@@ -312,47 +360,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFeatureItem(String emoji, String title, String subtitle) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceLight,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: Text(emoji, style: const TextStyle(fontSize: 20)),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
