@@ -1,1 +1,65 @@
-{"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}]},"flutter":{"platforms":{"android":{"default":{"projectId":"p1ecapp","appId":"1:698672235915:android:030a3624f5c6235cf05b8e","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"p1ecapp","appId":"1:698672235915:ios:948238f2f68b9429f05b8e","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"p1ecapp","configurations":{"android":"1:698672235915:android:030a3624f5c6235cf05b8e","ios":"1:698672235915:ios:948238f2f68b9429f05b8e","web":"1:698672235915:web:ad9effa64f1dd61df05b8e"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|html|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "p1ecapp",
+          "appId": "1:698672235915:android:030a3624f5c6235cf05b8e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "p1ecapp",
+          "appId": "1:698672235915:ios:948238f2f68b9429f05b8e",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "p1ecapp",
+          "configurations": {
+            "android": "1:698672235915:android:030a3624f5c6235cf05b8e",
+            "ios": "1:698672235915:ios:948238f2f68b9429f05b8e",
+            "web": "1:698672235915:web:ad9effa64f1dd61df05b8e"
+          }
+        }
+      }
+    }
+  }
+}
