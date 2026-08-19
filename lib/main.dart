@@ -21,24 +21,19 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase safely across all platforms
+  // Initialize Firebase safely
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    );
+    ).timeout(const Duration(seconds: 4));
   } catch (e) {
     debugPrint('Firebase init error: $e');
   }
 
   final authService = AuthService();
-  await authService.init();
-
   final firebaseAuthService = FirebaseAuthService();
   final firestoreChatService = FirestoreChatService();
-
   final themeService = ThemeService();
-  await themeService.init();
-
   final chatService = ChatService();
   final friendService = FriendService();
   final squadService = SquadService();
@@ -49,14 +44,12 @@ void main() async {
   final safetyService = SentinelSafetyService();
   final p2pService = P2pFastDropService();
 
-  if (authService.currentUser != null) {
-    await chatService.init(authService.currentUser!.id);
-    await friendService.init(authService.currentUser!.id);
-    await squadService.init(authService.currentUser, chatService);
-    await storyService.init(authService.currentUser, chatService);
-  }
+  // Non-blocking initialization
+  authService.init();
+  themeService.init();
 
   runApp(
+
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
