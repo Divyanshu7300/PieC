@@ -4,6 +4,8 @@ import 'package:piec/core/models/call_session_model.dart';
 import 'package:piec/core/models/message_model.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
+import 'package:piec/core/services/firestore_chat_service.dart';
 import 'package:piec/core/services/call_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/screens/call/active_call_screen.dart';
@@ -155,32 +157,64 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             },
           ),
 
-          // Message List Stream
+          // Message List Stream (Live Multi-Device Firestore Stream + Local Cache)
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
-                return ChatBubble(
-                  message: msg,
-                  onLongPress: () {
-                    MessageDetailsModal.show(
-                      context,
+            child: StreamBuilder<List<MessageModel>>(
+              stream: Provider.of<FirestoreChatService>(context, listen: false)
+                  .messagesStream(currentUser.id, widget.friend.id, currentUser.id),
+              builder: (context, snapshot) {
+                final displayMessages = (snapshot.hasData && snapshot.data!.isNotEmpty)
+                    ? snapshot.data!
+                    : messages;
+
+                if (displayMessages.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.lock_outline_rounded, color: AppColors.primaryNeon, size: 36),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'End-to-End Encrypted Chat',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Say hi to ${widget.friend.name}! 👋',
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  itemCount: displayMessages.length,
+                  itemBuilder: (context, index) {
+                    final msg = displayMessages[index];
+                    return ChatBubble(
                       message: msg,
-                      onSelectReaction: (emoji) {
+                      onLongPress: () {
+                        MessageDetailsModal.show(
+                          context,
+                          message: msg,
+                          onSelectReaction: (emoji) {
+                            chatService.addReaction(widget.friend.id, msg.id, emoji);
+                          },
+                        );
+                      },
+                      onAddReaction: (emoji) {
                         chatService.addReaction(widget.friend.id, msg.id, emoji);
                       },
                     );
-                  },
-                  onAddReaction: (emoji) {
-                    chatService.addReaction(widget.friend.id, msg.id, emoji);
                   },
                 );
               },
             ),
           ),
+
 
           // Quick Reaction Row Bar
           Container(
@@ -324,6 +358,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _sendMessage(String currentUserId, ChatService chatService) {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
+
+    final firestoreChat = Provider.of<FirestoreChatService>(context, listen: false);
+    firestoreChat.sendMessage(
+      senderId: currentUserId,
+      receiverId: widget.friend.id,
+      text: text,
+    );
 
     chatService.sendMessage(
       currentUserId: currentUserId,

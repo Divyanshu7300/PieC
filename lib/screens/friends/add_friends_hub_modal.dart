@@ -4,10 +4,13 @@ import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/friend_request_model.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
+import 'package:piec/core/services/firestore_chat_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/core/services/friend_service.dart';
 import 'package:piec/widgets/avatar/gamified_avatar.dart';
 import 'package:provider/provider.dart';
+
 
 class AddFriendsHubModal extends StatefulWidget {
   final int initialTab;
@@ -532,8 +535,18 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
           const SizedBox(height: 14),
 
           Expanded(
-            child: searchResults.isEmpty
-                ? Center(
+            child: FutureBuilder<List<UserModel>>(
+              future: Provider.of<FirestoreChatService>(context, listen: false)
+                  .searchRegisteredUsers(_searchQuery, currentUser?.id ?? ''),
+              builder: (context, snapshot) {
+                final firestoreResults = snapshot.data ?? [];
+                final combined = [
+                  ...searchResults,
+                  ...firestoreResults.where((fu) => !searchResults.any((su) => su.id == fu.id)),
+                ];
+
+                if (combined.isEmpty) {
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
@@ -545,73 +558,80 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Try searching with partial phone digits or @handle',
+                          'Type a name, @username, or phone number to find registered users',
                           style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                         ),
                       ],
                     ),
-                  )
-                : ListView.separated(
-                    itemCount: searchResults.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final user = searchResults[index];
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceLight,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.surfaceHover),
-                        ),
-                        child: Row(
-                          children: [
-                            GamifiedAvatar(config: user.avatarConfig, size: 48, showGlow: false),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                  Row(
-                                    children: [
-                                      Text('@${user.username}', style: const TextStyle(fontSize: 12, color: AppColors.primaryNeon)),
-                                      if (user.phone != null) ...[
-                                        const SizedBox(width: 6),
-                                        Text('• 📱 +91 ${user.phone}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                                      ],
+                  );
+                }
+
+                return ListView.separated(
+                  itemCount: combined.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final user = combined[index];
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.surfaceHover),
+                      ),
+                      child: Row(
+                        children: [
+                          GamifiedAvatar(config: user.avatarConfig, size: 48, showGlow: false),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                Row(
+                                  children: [
+                                    Text('@${user.username}', style: const TextStyle(fontSize: 12, color: AppColors.primaryNeon)),
+                                    if (user.phone != null && user.phone!.isNotEmpty) ...[
+                                      const SizedBox(width: 6),
+                                      Text('• 📱 ${user.phone}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                                     ],
-                                  ),
-                                  Text(user.statusText, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                                ],
-                              ),
+                                  ],
+                                ),
+                                Text(user.statusText, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                              ],
                             ),
-                            ElevatedButton(
-                              onPressed: () {
-                                if (currentUser != null) {
-                                  friendService.sendFriendRequest(
-                                    sender: currentUser,
-                                    receiver: user,
-                                    type: FriendRequestType.usernameSearch,
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Friend request sent to ${user.name}! 🚀')),
-                                  );
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.surface,
-                                foregroundColor: AppColors.primaryNeon,
-                                side: const BorderSide(color: AppColors.primaryNeon),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              ),
-                              child: const Text('Add ➕', style: TextStyle(fontSize: 12)),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (currentUser != null) {
+                                final chatService = Provider.of<ChatService>(context, listen: false);
+                                chatService.addFriend(user, currentUser.id);
+                                friendService.sendFriendRequest(
+                                  sender: currentUser,
+                                  receiver: user,
+                                  type: FriendRequestType.usernameSearch,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Connected with ${user.name}! 🚀 You can now chat!')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.surface,
+                              foregroundColor: AppColors.primaryNeon,
+                              side: const BorderSide(color: AppColors.primaryNeon),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            child: const Text('Add ➕', style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
+
         ],
       ),
     );

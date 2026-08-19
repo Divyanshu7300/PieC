@@ -164,6 +164,27 @@ class FirestoreChatService extends ChangeNotifier {
     return null;
   }
 
+  // Search real registered users in Firestore
+  Future<List<UserModel>> searchRegisteredUsers(String query, String currentUserId) async {
+    if (query.trim().isEmpty) return [];
+    final q = query.trim().toLowerCase();
+    try {
+      final snap = await _db.collection('users').get();
+      return snap.docs
+          .where((d) => d.id != currentUserId)
+          .map((d) => UserModel.fromFirestore(d.data(), d.id))
+          .where((u) =>
+              u.name.toLowerCase().contains(q) ||
+              u.username.toLowerCase().contains(q) ||
+              (u.phone != null && u.phone!.contains(q)) ||
+              (u.email != null && u.email!.toLowerCase().contains(q)))
+          .toList();
+    } catch (e) {
+      debugPrint('searchRegisteredUsers error: $e');
+      return [];
+    }
+  }
+
   // Stream friends list with live data
   Stream<List<UserModel>> friendsStream(String userId) {
     return _db
