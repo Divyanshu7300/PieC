@@ -1,9 +1,9 @@
 {
   "project_info": {
     "project_number": "698672235915",
+    "firebase_url": "https://p1ecapp-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "p1ecapp",
-    "storage_bucket": "p1ecapp.firebasestorage.app",
-    "firebase_url": "https://p1ecapp-default-rtdb.asia-southeast1.firebasedatabase.app"
+    "storage_bucket": "p1ecapp.firebasestorage.app"
   },
   "client": [
     {

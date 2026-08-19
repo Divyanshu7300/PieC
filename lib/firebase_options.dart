@@ -32,13 +32,14 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDbFb_UlUHFb5JK-haNzeIf6t4Q_ih65gU',
-    appId: '1:698672235915:web:030a3624f5c6235cf05b8e',
+    apiKey: 'AIzaSyDQCJJ_2BBxFfQulKFFDHMjK5Pp4aupgZo',
+    appId: '1:698672235915:web:ad9effa64f1dd61df05b8e',
     messagingSenderId: '698672235915',
     projectId: 'p1ecapp',
     authDomain: 'p1ecapp.firebaseapp.com',
     databaseURL: 'https://p1ecapp-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'p1ecapp.firebasestorage.app',
+    measurementId: 'G-3YB0GH1LKZ',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -49,7 +50,6 @@ class DefaultFirebaseOptions {
     databaseURL: 'https://p1ecapp-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'p1ecapp.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBG8acc_XzO2fvelovcCZANsgIg2tIf8XA',
     appId: '1:698672235915:ios:948238f2f68b9429f05b8e',
