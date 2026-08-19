@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
 class FirebaseAuthService extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   User? _firebaseUser;
   UserModel? _currentUser;
@@ -20,7 +20,15 @@ class FirebaseAuthService extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   FirebaseAuthService() {
-    _auth.authStateChanges().listen(_onAuthStateChanged);
+    _initAuthListener();
+  }
+
+  void _initAuthListener() {
+    try {
+      _auth.authStateChanges().listen(_onAuthStateChanged);
+    } catch (e) {
+      debugPrint('Auth listener init error: $e');
+    }
   }
 
   Future<void> _onAuthStateChanged(User? user) async {

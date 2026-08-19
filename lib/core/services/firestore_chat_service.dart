@@ -5,8 +5,9 @@ import '../models/message_model.dart';
 import '../models/user_model.dart';
 
 class FirestoreChatService extends ChangeNotifier {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
   final E2EEEngine _crypto = E2EEEngine();
+
 
   String _chatRoomId(String uid1, String uid2) {
     final sorted = [uid1, uid2]..sort();
