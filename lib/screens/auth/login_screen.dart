@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/avatar_config.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/screens/auth/otp_screen.dart';
 import 'package:piec/screens/main_navigation_screen.dart';
 import 'package:piec/widgets/avatar/gamified_avatar.dart';
@@ -254,21 +255,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: auth.isLoading
                             ? null
                             : () async {
-                                final phone = _phoneController.text.trim();
-                                if (phone.isEmpty) {
+                                final phone = '+91${_phoneController.text.trim()}';
+                                if (_phoneController.text.trim().isEmpty || _phoneController.text.trim().length < 10) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please enter phone number')),
+                                    const SnackBar(content: Text('Please enter a valid 10-digit number')),
                                   );
                                   return;
                                 }
-                                await auth.sendOtp(phone);
+                                final firebaseAuth = Provider.of<FirebaseAuthService>(context, listen: false);
+                                await firebaseAuth.sendOtp(phone);
                                 if (mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => OtpScreen(phoneNumber: phone),
-                                    ),
-                                  );
+                                  if (firebaseAuth.errorMessage != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: ${firebaseAuth.errorMessage}')),
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => OtpScreen(phoneNumber: phone),
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                         child: auth.isLoading

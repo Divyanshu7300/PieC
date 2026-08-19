@@ -160,4 +160,48 @@ class UserModel {
 
   factory UserModel.fromJson(String source) =>
       UserModel.fromMap(json.decode(source));
+
+  // Firebase Firestore factory
+  factory UserModel.fromFirestore(Map<String, dynamic> data, String uid) {
+    return UserModel(
+      id: uid,
+      name: data['name'] ?? 'PieC User',
+      username: data['username'] ?? data['phone'] ?? uid,
+      phone: data['phone'],
+      email: data['email'],
+      avatarConfig: data['avatarConfig'] != null
+          ? AvatarConfig.fromMap(Map<String, dynamic>.from(data['avatarConfig']))
+          : const AvatarConfig(),
+      statusText: data['statusText'] ?? 'On PieC',
+      isOnline: data['isOnline'] ?? false,
+      isGhostMode: data['isGhostMode'] ?? false,
+      privacyMode: LocationPrivacyMode.values.firstWhere(
+        (e) => e.name == (data['locationPrivacyMode'] ?? 'precise'),
+        orElse: () => LocationPrivacyMode.precise,
+      ),
+      batteryPercentage: data['batteryPercentage'] ?? 100,
+      isCharging: data['isCharging'] ?? false,
+      lastKnownBeaconAddress: data['lastKnownBeaconAddress'],
+      publicKey: data['publicKey'] ?? '',
+      lastActive: DateTime.now(),
+    );
+  }
+
+  // Convert to Firestore map
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'username': username,
+      'phone': phone,
+      'email': email,
+      'statusText': statusText,
+      'isOnline': isOnline,
+      'isGhostMode': isGhostMode,
+      'locationPrivacyMode': privacyMode.name,
+      'batteryPercentage': batteryPercentage,
+      'isCharging': isCharging,
+      'publicKey': publicKey,
+      'avatarConfig': avatarConfig.toMap(),
+    };
+  }
 }

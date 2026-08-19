@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:piec/firebase_options.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
+import 'package:piec/core/services/firestore_chat_service.dart';
 import 'package:piec/core/services/call_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/core/services/convoy_service.dart';
@@ -17,8 +21,16 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   final authService = AuthService();
   await authService.init();
+
+  final firebaseAuthService = FirebaseAuthService();
+  final firestoreChatService = FirestoreChatService();
 
   final themeService = ThemeService();
   await themeService.init();
@@ -44,6 +56,8 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
+        ChangeNotifierProvider.value(value: firebaseAuthService),
+        ChangeNotifierProvider.value(value: firestoreChatService),
         ChangeNotifierProvider.value(value: themeService),
         ChangeNotifierProvider.value(value: chatService),
         ChangeNotifierProvider.value(value: friendService),
