@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "698672235915",
+    "project_id": "p1ecapp",
+    "storage_bucket": "p1ecapp.firebasestorage.app",
+    "firebase_url": "https://p1ecapp-default-rtdb.asia-southeast1.firebasedatabase.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:698672235915:android:030a3624f5c6235cf05b8e",
+        "android_client_info": {
+          "package_name": "com.piec.app.piec"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbFb_UlUHFb5JK-haNzeIf6t4Q_ih65gU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
