@@ -61,7 +61,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
       return const Scaffold(backgroundColor: Colors.black, body: SizedBox());
     }
 
-    final isVideo = call.type == CallType.avatarVideo && call.isVideoOn;
+    final isVideo = call.isVideoOn;
     final isConnected = call.status == CallStatus.connected;
 
     return Scaffold(

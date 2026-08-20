@@ -183,8 +183,19 @@ class CallService extends ChangeNotifier {
 
   void toggleVideo() {
     if (_activeCall != null) {
-      _activeCall = _activeCall!.copyWith(isVideoOn: !_activeCall!.isVideoOn);
+      final newVideoState = !_activeCall!.isVideoOn;
+      _activeCall = _activeCall!.copyWith(
+        isVideoOn: newVideoState,
+        type: newVideoState ? CallType.avatarVideo : CallType.audio,
+      );
       notifyListeners();
+
+      try {
+        _db.collection('calls').doc(_activeCall!.callId).update({
+          'isVideoOn': newVideoState,
+          'type': newVideoState ? 'avatarVideo' : 'audio',
+        });
+      } catch (_) {}
     }
   }
 
