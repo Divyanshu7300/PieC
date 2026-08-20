@@ -46,9 +46,9 @@ void main() async {
   final safetyService = SentinelSafetyService();
   final p2pService = P2pFastDropService();
 
-  // Non-blocking initialization
-  authService.init();
-  themeService.init();
+  // Persistent login session initialization
+  await authService.init();
+  await themeService.init();
 
   runApp(
 
