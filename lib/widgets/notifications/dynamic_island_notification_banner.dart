@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
+import 'package:piec/core/models/call_session_model.dart';
+import 'package:piec/core/services/call_service.dart';
 import 'package:piec/core/services/notification_service.dart';
+import 'package:piec/screens/call/active_call_screen.dart';
 import 'package:provider/provider.dart';
 
 class DynamicIslandNotificationWrapper extends StatefulWidget {
@@ -73,10 +76,123 @@ class _DynamicIslandNotificationWrapperState
 
   @override
   Widget build(BuildContext context) {
+    final callService = Provider.of<CallService>(context);
+    final incomingCall = callService.incomingCall;
+
     return Stack(
       children: [
         widget.child,
-        if (_currentNotification != null)
+
+        // 1. INCOMING CALL OVERLAY MODAL (Real-time Cross-Device Call Alert)
+        if (incomingCall != null)
+          Positioned.fill(
+            child: Material(
+              color: Colors.black.withOpacity(0.85),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Caller Info Header
+                      Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.primaryNeon.withOpacity(0.15),
+                              border: Border.all(color: AppColors.primaryNeon, width: 2),
+                            ),
+                            child: const Text('📞', style: TextStyle(fontSize: 48)),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            incomingCall.caller.name,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Incoming ${incomingCall.type == CallType.avatarVideo ? "Video" : "Spatial Voice"} Call 🛰️',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.primaryNeon,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Accept / Decline Action Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // Decline Button
+                          GestureDetector(
+                            onTap: () {
+                              callService.declineIncomingCall();
+                            },
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 68,
+                                  height: 68,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.accentPink,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(color: AppColors.accentPink, blurRadius: 16),
+                                    ],
+                                  ),
+                                  child: const Icon(Icons.call_end_rounded, color: Colors.white, size: 30),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text('Decline', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+
+                          // Accept Button
+                          GestureDetector(
+                            onTap: () {
+                              callService.acceptIncomingCall();
+                              ActiveCallScreen.show(context);
+                            },
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 68,
+                                  height: 68,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.accentGreen,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(color: AppColors.accentGreen, blurRadius: 16),
+                                    ],
+                                  ),
+                                  child: const Icon(Icons.call_rounded, color: Colors.white, size: 30),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // 2. DYNAMIC ISLAND FLOATING ALERT
+        if (_currentNotification != null && incomingCall == null)
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 16,

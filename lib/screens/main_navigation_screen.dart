@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/user_model.dart';
+import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/call_service.dart';
+import 'package:piec/core/services/friend_service.dart';
 import 'package:piec/core/services/theme_service.dart';
 import 'package:piec/screens/chat/chat_list_screen.dart';
 import 'package:piec/screens/map/world_map_screen.dart';
@@ -23,6 +26,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      if (auth.currentUser != null) {
+        Provider.of<CallService>(context, listen: false).init(auth.currentUser!.id);
+        Provider.of<FriendService>(context, listen: false).init(auth.currentUser!.id);
+      }
+    });
   }
 
   void _onVisitOnMap(UserModel friend) {
