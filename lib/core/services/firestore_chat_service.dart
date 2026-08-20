@@ -205,4 +205,45 @@ class FirestoreChatService extends ChangeNotifier {
       return friends;
     });
   }
+
+  // Cross-device Firestore friend connection
+  Future<void> addFriendToFirestore({
+    required String currentUserId,
+    required UserModel friend,
+  }) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(currentUserId)
+          .collection('friends')
+          .doc(friend.id)
+          .set({
+        'uid': friend.id,
+        'name': friend.name,
+        'username': friend.username,
+        'phone': friend.phone,
+        'addedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Reciprocal connection
+      final currentDoc = await _db.collection('users').doc(currentUserId).get();
+      if (currentDoc.exists && currentDoc.data() != null) {
+        final data = currentDoc.data()!;
+        await _db
+            .collection('users')
+            .doc(friend.id)
+            .collection('friends')
+            .doc(currentUserId)
+            .set({
+          'uid': currentUserId,
+          'name': data['name'] ?? 'PieC Friend',
+          'username': data['username'] ?? 'friend',
+          'phone': data['phone'],
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      debugPrint('addFriendToFirestore error: $e');
+    }
+  }
 }

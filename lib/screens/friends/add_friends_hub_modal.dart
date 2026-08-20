@@ -601,15 +601,20 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              final currentUid = currentUser?.id ?? 'user_agent';
+                              final chatService = Provider.of<ChatService>(context, listen: false);
+                              final firestoreChatService = Provider.of<FirestoreChatService>(context, listen: false);
+                              chatService.addFriend(user, currentUid);
+                              await firestoreChatService.addFriendToFirestore(currentUserId: currentUid, friend: user);
                               if (currentUser != null) {
-                                final chatService = Provider.of<ChatService>(context, listen: false);
-                                chatService.addFriend(user, currentUser.id);
                                 friendService.sendFriendRequest(
                                   sender: currentUser,
                                   receiver: user,
                                   type: FriendRequestType.usernameSearch,
                                 );
+                              }
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Connected with ${user.name}! 🚀 You can now chat!')),
                                 );

@@ -232,6 +232,13 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Save and set current active user
+  Future<void> saveCurrentUser(UserModel user) async {
+    _currentUser = user;
+    await _storage.saveCurrentUser(user);
+    notifyListeners();
+  }
+
   /// Logout
   Future<void> logout() async {
     _currentUser = null;

@@ -28,10 +28,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final themeService = Provider.of<ThemeService>(context);
     final user = firebaseAuth.currentUser ?? auth.currentUser;
-
-    if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    final activeUser = user ??
+        UserModel(
+          id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+          name: 'PieC Explorer',
+          username: 'explorer_01',
+          publicKey: 'pk_default_key',
+          lastActive: DateTime.now(),
+        );
 
     return Scaffold(
       appBar: AppBar(
@@ -56,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileHeaderCard(user, themeService, auth),
+            _buildProfileHeaderCard(activeUser, themeService, auth),
             const SizedBox(height: 24),
             _buildSectionHeader("SPATIAL PRIVACY & SECURITY", "🛡️"),
             Container(
@@ -71,7 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.location_on_rounded,
                     iconColor: AppColors.primaryNeon,
                     title: "Location Privacy Mode",
-                    subtitle: _getPrivacyModeLabel(user.privacyMode, user.isGhostMode),
+                    subtitle: _getPrivacyModeLabel(activeUser.privacyMode, activeUser.isGhostMode),
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -79,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        user.isGhostMode ? "👻 Ghost" : "🎯 Precise",
+                        activeUser.isGhostMode ? "👻 Ghost" : "🎯 Precise",
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -87,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-                    onTap: () => _showPrivacyModeSheet(context, auth, user),
+                    onTap: () => _showPrivacyModeSheet(context, auth, activeUser),
                   ),
                   const Divider(height: 1, color: AppColors.surfaceHover),
                   _buildSettingsTile(
@@ -113,8 +117,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingsTile(
                     icon: Icons.home_rounded,
                     iconColor: AppColors.homeTag,
-                    title: user.homeLocation?.title ?? "Home Base",
-                    subtitle: user.homeLocation?.address ?? "Tap to set custom home coordinates",
+                    title: activeUser.homeLocation?.title ?? "Home Base",
+                    subtitle: activeUser.homeLocation?.address ?? "Tap to set custom home coordinates",
                     trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
                     onTap: () {
                       Navigator.push(
@@ -129,8 +133,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingsTile(
                     icon: Icons.work_rounded,
                     iconColor: AppColors.officeTag,
-                    title: user.officeLocation?.title ?? "Office / Campus",
-                    subtitle: user.officeLocation?.address ?? "Tap to set custom workspace coordinates",
+                    title: activeUser.officeLocation?.title ?? "Office / Campus",
+                    subtitle: activeUser.officeLocation?.address ?? "Tap to set custom workspace coordinates",
                     trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
                     onTap: () {
                       Navigator.push(

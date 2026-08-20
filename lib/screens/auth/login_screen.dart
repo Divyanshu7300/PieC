@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/avatar_config.dart';
+import 'package:piec/core/models/user_model.dart';
+import 'package:piec/core/services/auth_service.dart';
 import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/screens/auth/otp_screen.dart';
 import 'package:piec/screens/auth/setup_profile_screen.dart';
@@ -349,6 +351,40 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ],
+
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.surfaceHover, height: 1),
+              const SizedBox(height: 16),
+
+              // Quick Explorer 1-Tap Access Button
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final auth = Provider.of<AuthService>(context, listen: false);
+                  final deviceId = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+                  final user = UserModel(
+                    id: 'user_$deviceId',
+                    name: 'PieC Explorer $deviceId',
+                    username: 'explorer_$deviceId',
+                    publicKey: 'pk_$deviceId',
+                    lastActive: DateTime.now(),
+                  );
+                  await auth.saveCurrentUser(user);
+                  if (mounted) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.flash_on_rounded, color: AppColors.primaryNeon, size: 18),
+                label: const Text('Instant Quick Access ⚡ (1-Tap)', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryNeon,
+                  side: const BorderSide(color: AppColors.primaryNeon),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
 
               const SizedBox(height: 20),
               const Text(
