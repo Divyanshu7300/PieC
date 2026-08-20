@@ -78,5 +78,7 @@
 	<string>PieC needs microphone access for encrypted spatial voice calls and voice notes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PieC needs photo library access to share media in encrypted chats.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>PieC needs contacts access to discover your friends on the spatial map.</string>
 </dict>
 </plist>
