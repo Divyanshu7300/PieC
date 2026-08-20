@@ -10,6 +10,7 @@ import 'package:piec/core/services/convoy_service.dart';
 import 'package:piec/core/services/friend_service.dart';
 import 'package:piec/core/services/location_service.dart';
 import 'package:piec/core/services/navigation_service.dart';
+import 'package:piec/core/services/notification_service.dart';
 import 'package:piec/core/services/p2p_fastdrop_service.dart';
 import 'package:piec/core/services/sentinel_safety_service.dart';
 import 'package:piec/core/services/squad_service.dart';
@@ -17,6 +18,7 @@ import 'package:piec/core/services/story_service.dart';
 import 'package:piec/core/services/theme_service.dart';
 import 'package:piec/screens/auth/login_screen.dart';
 import 'package:piec/screens/main_navigation_screen.dart';
+import 'package:piec/widgets/notifications/dynamic_island_notification_banner.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -45,13 +47,14 @@ void main() async {
   final navigationService = NavigationService();
   final safetyService = SentinelSafetyService();
   final p2pService = P2pFastDropService();
+  final notificationService = NotificationService();
 
   // Persistent login session initialization
   await authService.init();
   await themeService.init();
+  notificationService.init();
 
   runApp(
-
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
@@ -59,6 +62,7 @@ void main() async {
         ChangeNotifierProvider.value(value: firestoreChatService),
         ChangeNotifierProvider.value(value: locationService),
         ChangeNotifierProvider.value(value: themeService),
+        ChangeNotifierProvider.value(value: notificationService),
         ChangeNotifierProvider.value(value: chatService),
         ChangeNotifierProvider.value(value: friendService),
         ChangeNotifierProvider.value(value: squadService),
@@ -89,9 +93,11 @@ class PieCApp extends StatelessWidget {
       title: 'PieC Spatial - Gamified Map & E2EE Chat',
       debugShowCheckedModeBanner: false,
       theme: themeService.currentThemeData,
-      home: isAuthenticated
-          ? const MainNavigationScreen()
-          : const LoginScreen(),
+      home: DynamicIslandNotificationWrapper(
+        child: isAuthenticated
+            ? const MainNavigationScreen()
+            : const LoginScreen(),
+      ),
     );
   }
 }
