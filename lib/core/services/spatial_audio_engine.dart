@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:js' as js;
+import 'package:piec/core/services/audio_stub.dart'
+    if (dart.library.js) 'package:piec/core/services/audio_web.dart';
 
 class SpatialAudioEngine {
   static final SpatialAudioEngine _instance = SpatialAudioEngine._internal();
@@ -17,15 +17,7 @@ class SpatialAudioEngine {
   bool get isVoiceActive => _isVoiceActive;
 
   void _playTone(double frequency, double durationSeconds, {String type = 'sine', double volume = 0.2}) {
-    if (kIsWeb) {
-      try {
-        js.context.callMethod('playSpatialTone', [frequency, durationSeconds, type, volume]);
-      } catch (e) {
-        debugPrint('WebAudio error: $e');
-      }
-    } else {
-      debugPrint('🎵 [SpatialAudioEngine] Audio Tone: ${frequency}Hz for ${durationSeconds}s');
-    }
+    playPlatformTone(frequency, durationSeconds, type, volume);
   }
 
   // 1. Play Outgoing / Incoming Ringtone (Audible 440Hz / 480Hz ring tone)
