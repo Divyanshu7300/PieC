@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 
 class SpatialAudioEngine {
   static final SpatialAudioEngine _instance = SpatialAudioEngine._internal();
@@ -7,25 +9,37 @@ class SpatialAudioEngine {
   SpatialAudioEngine._internal();
 
   Timer? _ringtoneTimer;
-  Timer? _speakingVoiceTimer;
+  Timer? _voiceStreamTimer;
   bool _isPlayingRingtone = false;
-  bool _isSpeakingActive = false;
+  bool _isVoiceActive = false;
 
   bool get isPlayingRingtone => _isPlayingRingtone;
-  bool get isSpeakingActive => _isSpeakingActive;
+  bool get isVoiceActive => _isVoiceActive;
 
-  // Play outgoing or incoming call ringtone
+  void _playTone(double frequency, double durationSeconds, {String type = 'sine', double volume = 0.2}) {
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('playSpatialTone', [frequency, durationSeconds, type, volume]);
+      } catch (e) {
+        debugPrint('WebAudio error: $e');
+      }
+    } else {
+      debugPrint('🎵 [SpatialAudioEngine] Audio Tone: ${frequency}Hz for ${durationSeconds}s');
+    }
+  }
+
+  // 1. Play Outgoing / Incoming Ringtone (Audible 440Hz / 480Hz ring tone)
   void startRingtone() {
     stopRingtone();
     _isPlayingRingtone = true;
-    debugPrint('🔊 [SpatialAudioEngine] Ringtone ringing started...');
+    _playTone(440.0, 1.2, type: 'sine', volume: 0.25);
 
-    _ringtoneTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    _ringtoneTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (!_isPlayingRingtone) {
         timer.cancel();
         return;
       }
-      debugPrint('🔔 [SpatialAudioEngine] Ringtone pulse: 800Hz / 1000Hz dual chime');
+      _playTone(440.0, 1.2, type: 'sine', volume: 0.25);
     });
   }
 
@@ -35,42 +49,51 @@ class SpatialAudioEngine {
     _ringtoneTimer = null;
   }
 
-  // Start in-call spatial HD voice stream simulation & speaking feedback
+  // 2. Start In-Call Spatial HD Voice Stream
   void startCallVoiceStream() {
     stopRingtone();
-    _isSpeakingActive = true;
-    debugPrint('🎙️ [SpatialAudioEngine] E2EE Spatial HD Voice Stream Active (48kHz Opus Audio)');
+    _isVoiceActive = true;
+    playCallConnectedChime();
 
-    _speakingVoiceTimer = Timer.periodic(const Duration(milliseconds: 600), (timer) {
-      if (!_isSpeakingActive) {
+    _voiceStreamTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!_isVoiceActive) {
         timer.cancel();
         return;
       }
+      _playTone(320.0, 0.12, type: 'triangle', volume: 0.08);
     });
   }
 
   void stopCallVoiceStream() {
-    _isSpeakingActive = false;
-    _speakingVoiceTimer?.cancel();
-    _speakingVoiceTimer = null;
-    debugPrint('🔇 [SpatialAudioEngine] Voice Stream Terminated');
+    _isVoiceActive = false;
+    _voiceStreamTimer?.cancel();
+    _voiceStreamTimer = null;
   }
 
-  // Play notification chime for incoming messages or requests
-  void playNotificationChime() {
-    debugPrint('✨ [SpatialAudioEngine] Play Notification Chime Ping (1200Hz -> 1800Hz chime)');
-  }
-
-  // Play call connected tone
+  // 3. Play Call Connected Chime
   void playCallConnectedChime() {
     stopRingtone();
-    debugPrint('📞 [SpatialAudioEngine] Play Call Connected Success Chime');
+    _playTone(523.25, 0.15, type: 'sine', volume: 0.3); // C5
+    Future.delayed(const Duration(milliseconds: 160), () {
+      _playTone(659.25, 0.25, type: 'sine', volume: 0.3); // E5
+    });
   }
 
-  // Play call hangup tone
+  // 4. Play Call Hangup Chime
   void playCallHangupChime() {
     stopRingtone();
     stopCallVoiceStream();
-    debugPrint('📴 [SpatialAudioEngine] Play Call Hangup Chime');
+    _playTone(440.0, 0.15, type: 'sine', volume: 0.25);
+    Future.delayed(const Duration(milliseconds: 160), () {
+      _playTone(349.23, 0.3, type: 'sine', volume: 0.25);
+    });
+  }
+
+  // 5. Play Notification Message Ping Chime
+  void playNotificationChime() {
+    _playTone(880.0, 0.1, type: 'sine', volume: 0.3);
+    Future.delayed(const Duration(milliseconds: 120), () {
+      _playTone(1318.51, 0.2, type: 'sine', volume: 0.3);
+    });
   }
 }

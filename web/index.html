@@ -38,9 +38,33 @@
     This is useful to provide a custom configuration to the Flutter loader
     or to give the user feedback during the initialization process.
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <script>
+    window.AudioCtx = window.AudioContext || window.webkitAudioContext;
+    window.audioCtxInstance = null;
+
+    window.playSpatialTone = function(freq, duration, type, volume) {
+      try {
+        if (!window.audioCtxInstance) {
+          window.audioCtxInstance = new window.AudioCtx();
+        }
+        if (window.audioCtxInstance.state === 'suspended') {
+          window.audioCtxInstance.resume();
+        }
+        var osc = window.audioCtxInstance.createOscillator();
+        var gain = window.audioCtxInstance.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, window.audioCtxInstance.currentTime);
+        gain.gain.setValueAtTime(volume || 0.2, window.audioCtxInstance.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, window.audioCtxInstance.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(window.audioCtxInstance.destination);
+        osc.start();
+        osc.stop(window.audioCtxInstance.currentTime + duration);
+      } catch(e) {
+        console.log('Audio tone error:', e);
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

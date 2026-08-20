@@ -56,9 +56,33 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
 
     if (call == null || call.status == CallStatus.ended) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.pop(context);
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
       });
-      return const Scaffold(backgroundColor: Colors.black, body: SizedBox());
+      return Scaffold(
+        backgroundColor: const Color(0xFF0B0D17),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.call_end_rounded, color: Color(0xFFEF4444), size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Call Ended 📴',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final isVideo = call.isVideoOn;
@@ -260,7 +284,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
                       GestureDetector(
                         onTap: () {
                           callService.endCall();
-                          Navigator.pop(context);
+                          if (mounted && Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
                         },
                         child: Container(
                           width: 52,
