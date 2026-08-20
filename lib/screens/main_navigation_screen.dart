@@ -21,19 +21,22 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   late int _currentIndex;
+  String? _lastInitializedUid;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = Provider.of<AuthService>(context, listen: false);
-      if (auth.currentUser != null) {
-        Provider.of<CallService>(context, listen: false).init(auth.currentUser!.id);
-        Provider.of<FriendService>(context, listen: false).init(auth.currentUser!.id);
-      }
-    });
+  void _ensureServicesInitialized() {
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final uid = auth.currentUser?.id;
+    if (uid != null && uid != _lastInitializedUid) {
+      _lastInitializedUid = uid;
+      Provider.of<CallService>(context, listen: false).init(uid);
+      Provider.of<FriendService>(context, listen: false).init(uid);
+    }
   }
 
   void _onVisitOnMap(UserModel friend) {
@@ -44,6 +47,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureServicesInitialized();
     final themeService = Provider.of<ThemeService>(context);
 
     final List<Widget> screens = [
