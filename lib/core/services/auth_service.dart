@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:piec/core/crypto/e2ee_engine.dart';
 import 'package:piec/core/models/avatar_config.dart';
@@ -7,6 +8,7 @@ import 'package:piec/core/services/storage_service.dart';
 import 'package:uuid/uuid.dart';
 
 class AuthService extends ChangeNotifier {
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _verificationCode;
@@ -23,8 +25,22 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     _currentUser = await _storage.getCurrentUser();
+    if (_currentUser != null) {
+      _syncToFirestore(_currentUser!);
+    }
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> _syncToFirestore(UserModel user) async {
+    try {
+      await _db.collection('users').doc(user.id).set(
+        user.toFirestore(),
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      debugPrint('Sync user to Firestore error: $e');
+    }
   }
 
   /// Sends OTP to phone number (simulated / real-ready)
@@ -236,6 +252,7 @@ class AuthService extends ChangeNotifier {
   Future<void> saveCurrentUser(UserModel user) async {
     _currentUser = user;
     await _storage.saveCurrentUser(user);
+    await _syncToFirestore(user);
     notifyListeners();
   }
 
