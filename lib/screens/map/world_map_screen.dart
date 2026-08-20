@@ -24,6 +24,8 @@ import 'package:piec/widgets/map/friend_map_marker.dart';
 import 'package:piec/widgets/map/navigation_directions_hud.dart';
 import 'package:piec/widgets/map/poi_category_chips.dart';
 import 'package:piec/widgets/map/visit_place_sheet.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
+import 'package:piec/widgets/map/spatial_radar_card.dart';
 import 'package:provider/provider.dart';
 
 class WorldMapScreen extends StatefulWidget {
@@ -60,12 +62,17 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
   }
 
   Future<void> _initLiveGps() async {
-    final pos = await _locationService.getCurrentPosition();
-    if (pos != null && mounted) {
-      final auth = Provider.of<AuthService>(context, listen: false);
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context, listen: false);
+    final locationService = Provider.of<LocationService>(context, listen: false);
+    final uid = firebaseAuth.currentUser?.id ?? auth.currentUser?.id;
+
+    await locationService.startLocationTracking(currentUserId: uid);
+    if (mounted && locationService.currentPosition != null) {
+      final pos = locationService.currentPosition!;
       final livePoint = LocationPoint(
         title: 'Current Spot',
-        address: 'Real Live GPS Location',
+        address: locationService.currentAddress,
         latitude: pos.latitude,
         longitude: pos.longitude,
         type: LocationType.live,
@@ -623,8 +630,52 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(width: 8),
+
+                    // 🛰️ Spatial Radar Button
+                    GestureDetector(
+                      onTap: () {
+                        if (currentUser != null) {
+                          SpatialRadarModal.show(
+                            context,
+                            currentUser: currentUser,
+                            friends: visibleFriends,
+                            onSelectFriend: (friend) {
+                              if (friend.liveLocation != null) {
+                                _animatedPanTo(friend.liveLocation!.latLng, zoom: 16.0);
+                              }
+                            },
+                          );
+                        }
+                      },
+                      child: Container(
+                        height: 46,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withOpacity(0.94),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.primaryNeon),
+                        ),
+                        child: Row(
+                          children: const [
+                            Text('🛰️', style: TextStyle(fontSize: 16)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Radar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryNeon,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
+
 
                 const SizedBox(height: 8),
 

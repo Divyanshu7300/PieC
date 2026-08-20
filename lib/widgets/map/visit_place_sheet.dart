@@ -49,10 +49,13 @@ class VisitPlaceSheet extends StatelessWidget {
     final locService = LocationService();
     String distanceStr = 'Nearby';
     if (currentUserLocation != null) {
-      distanceStr = locService.formatDistance(
-        currentUserLocation!.latLng,
-        locationPoint.latLng,
+      final meters = locService.calculateDistanceMeters(
+        currentUserLocation!.latitude,
+        currentUserLocation!.longitude,
+        locationPoint.latitude,
+        locationPoint.longitude,
       );
+      distanceStr = locService.formatDistance(meters);
     }
 
     Color badgeColor = AppColors.primaryNeon;

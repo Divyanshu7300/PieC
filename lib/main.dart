@@ -8,6 +8,7 @@ import 'package:piec/core/services/call_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/core/services/convoy_service.dart';
 import 'package:piec/core/services/friend_service.dart';
+import 'package:piec/core/services/location_service.dart';
 import 'package:piec/core/services/navigation_service.dart';
 import 'package:piec/core/services/p2p_fastdrop_service.dart';
 import 'package:piec/core/services/sentinel_safety_service.dart';
@@ -33,6 +34,7 @@ void main() async {
   final authService = AuthService();
   final firebaseAuthService = FirebaseAuthService();
   final firestoreChatService = FirestoreChatService();
+  final locationService = LocationService();
   final themeService = ThemeService();
   final chatService = ChatService();
   final friendService = FriendService();
@@ -55,6 +57,7 @@ void main() async {
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: firebaseAuthService),
         ChangeNotifierProvider.value(value: firestoreChatService),
+        ChangeNotifierProvider.value(value: locationService),
         ChangeNotifierProvider.value(value: themeService),
         ChangeNotifierProvider.value(value: chatService),
         ChangeNotifierProvider.value(value: friendService),
