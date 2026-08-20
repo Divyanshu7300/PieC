@@ -414,16 +414,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   color: AppColors.accentPink,
                   onTap: () {
                     Navigator.pop(ctx);
-                    chatService.sendMessage(
-                      currentUserId: currentUser.id,
-                      friendId: widget.friend.id,
-                      text: '📸 Sent an encrypted photo attachment',
-                      type: MessageType.image,
-                    );
-                    _scrollToBottom();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Encrypted Photo sent! 📸🔒')),
-                    );
+                    _showPhotoPickerSheet(context, currentUser, chatService);
                   },
                 ),
 
@@ -537,6 +528,129 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showPhotoPickerSheet(BuildContext context, UserModel currentUser, ChatService chatService) {
+    final photoPresets = [
+      {'title': 'Cyberpunk Selfie 📸', 'url': 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&q=80', 'tag': 'Avatar'},
+      {'title': 'World Map View 🗺️', 'url': 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&q=80', 'tag': 'Spatial'},
+      {'title': 'Cyber City Lights 🏙️', 'url': 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&q=80', 'tag': 'City'},
+      {'title': 'Tokyo Sunset 🌸', 'url': 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&q=80', 'tag': 'Travel'},
+      {'title': 'Convoy Highway 🏎️', 'url': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80', 'tag': 'Drive'},
+      {'title': 'Café Spot ☕', 'url': 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80', 'tag': 'Base'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: AppColors.primaryNeon, width: 2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Encrypted Photo 📸',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 170,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: photoPresets.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final item = photoPresets[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      final firestoreChat = Provider.of<FirestoreChatService>(context, listen: false);
+                      firestoreChat.sendMessage(
+                        senderId: currentUser.id,
+                        receiverId: widget.friend.id,
+                        text: item['title']!,
+                        type: MessageType.image,
+                        mediaUrl: item['url'],
+                      );
+                      chatService.sendMessage(
+                        currentUserId: currentUser.id,
+                        friendId: widget.friend.id,
+                        text: item['title']!,
+                        type: MessageType.image,
+                        mediaUrl: item['url'],
+                      );
+                      _scrollToBottom();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Encrypted ${item['title']} sent! 📸🔒')),
+                      );
+                    },
+                    child: Container(
+                      width: 130,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.primaryNeon.withOpacity(0.4)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              item['url']!,
+                              fit: BoxFit.cover,
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 8,
+                              left: 8,
+                              right: 8,
+                              child: Text(
+                                item['title']!,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }

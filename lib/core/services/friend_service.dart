@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:piec/core/crypto/e2ee_engine.dart';
 import 'package:piec/core/models/friend_request_model.dart';
@@ -7,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class FriendService extends ChangeNotifier {
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
   static const String _keyPendingRequests = 'piec_pending_requests';
   final E2EEEngine _crypto = E2EEEngine();
   final Uuid _uuid = const Uuid();
@@ -14,6 +16,7 @@ class FriendService extends ChangeNotifier {
   List<FriendRequestModel> _pendingRequests = [];
   List<UserModel> _discoverableUsers = [];
   List<UserModel> _nearbyRadarUsers = [];
+  String? _currentUserId;
 
   List<FriendRequestModel> get pendingRequests => _pendingRequests;
   List<UserModel> get discoverableUsers => _discoverableUsers;
@@ -22,22 +25,26 @@ class FriendService extends ChangeNotifier {
   int get pendingCount => _pendingRequests.length;
 
   Future<void> init(String currentUserId) async {
+    _currentUserId = currentUserId;
     _discoverableUsers = [];
     _nearbyRadarUsers = [];
 
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_keyPendingRequests);
-    if (data != null && data.isNotEmpty) {
-      try {
-        final List decoded = jsonDecode(data);
-        _pendingRequests = decoded.map((item) => FriendRequestModel.fromMap(item)).toList();
-      } catch (_) {
-        _pendingRequests = [];
-      }
-    } else {
-      _pendingRequests = [];
+    // 1. Listen to real incoming friend requests from Cloud Firestore
+    try {
+      _db
+          .collection('users')
+          .doc(currentUserId)
+          .collection('friend_requests')
+          .snapshots()
+          .listen((snap) {
+        _pendingRequests = snap.docs.map((doc) {
+          return FriendRequestModel.fromMap(doc.data());
+        }).where((req) => req.sender.id != currentUserId).toList();
+        notifyListeners();
+      });
+    } catch (e) {
+      debugPrint('Friend requests firestore listener error: $e');
     }
-    notifyListeners();
   }
 
   Future<void> sendKnockKnock({
@@ -54,9 +61,16 @@ class FriendService extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
-    _pendingRequests.insert(0, newRequest);
-    notifyListeners();
-    await _savePendingRequests();
+    try {
+      await _db
+          .collection('users')
+          .doc(targetUser.id)
+          .collection('friend_requests')
+          .doc(newRequest.id)
+          .set(newRequest.toMap());
+    } catch (e) {
+      debugPrint('sendKnockKnock error: $e');
+    }
   }
 
   Future<void> sendRadarBump({
@@ -71,9 +85,16 @@ class FriendService extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
-    _pendingRequests.insert(0, newRequest);
-    notifyListeners();
-    await _savePendingRequests();
+    try {
+      await _db
+          .collection('users')
+          .doc(targetUser.id)
+          .collection('friend_requests')
+          .doc(newRequest.id)
+          .set(newRequest.toMap());
+    } catch (e) {
+      debugPrint('sendRadarBump error: $e');
+    }
   }
 
   Future<void> sendFriendRequest({
@@ -91,9 +112,17 @@ class FriendService extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
-    _pendingRequests.insert(0, newRequest);
-    notifyListeners();
-    await _savePendingRequests();
+    // Save to receiver's Firestore inbox
+    try {
+      await _db
+          .collection('users')
+          .doc(receiver.id)
+          .collection('friend_requests')
+          .doc(newRequest.id)
+          .set(newRequest.toMap());
+    } catch (e) {
+      debugPrint('Error sending friend request to Firestore: $e');
+    }
   }
 
   Future<UserModel?> acceptFriendRequest(
@@ -102,10 +131,21 @@ class FriendService extends ChangeNotifier {
   }) async {
     final index = _pendingRequests.indexWhere((r) => r.id == requestId);
     if (index != -1) {
-      final sender = _pendingRequests[index].sender;
+      final req = _pendingRequests[index];
+      final sender = req.sender;
       _pendingRequests.removeAt(index);
       notifyListeners();
-      await _savePendingRequests();
+
+      if (_currentUserId != null) {
+        try {
+          await _db
+              .collection('users')
+              .doc(_currentUserId!)
+              .collection('friend_requests')
+              .doc(requestId)
+              .delete();
+        } catch (_) {}
+      }
       return sender;
     }
     return null;
@@ -114,17 +154,20 @@ class FriendService extends ChangeNotifier {
   Future<void> declineFriendRequest(String requestId) async {
     _pendingRequests.removeWhere((r) => r.id == requestId);
     notifyListeners();
-    await _savePendingRequests();
+    if (_currentUserId != null) {
+      try {
+        await _db
+            .collection('users')
+            .doc(_currentUserId!)
+            .collection('friend_requests')
+            .doc(requestId)
+            .delete();
+      } catch (_) {}
+    }
   }
 
   Future<UserModel?> acceptRequest(FriendRequestModel request) => acceptFriendRequest(request.id);
   Future<void> declineRequest(FriendRequestModel request) => declineFriendRequest(request.id);
-
-  Future<void> _savePendingRequests() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = jsonEncode(_pendingRequests.map((r) => r.toMap()).toList());
-    await prefs.setString(_keyPendingRequests, data);
-  }
 
   List<UserModel> searchUsers(String query) {
     if (query.trim().isEmpty) return [];

@@ -161,33 +161,67 @@ class ChatBubble extends StatelessWidget {
     switch (message.type) {
       // 1. Image Message
       case MessageType.image:
+        final hasMedia = message.mediaUrl != null && message.mediaUrl!.isNotEmpty;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 220,
-              height: 160,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E1035), Color(0xFF0F172A)],
-                ),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
-              ),
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.image_rounded, size: 48, color: AppColors.primaryNeon),
-                  SizedBox(height: 6),
-                  Text(
-                    '🔒 Encrypted Photo',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 220,
+                height: 160,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E1035), Color(0xFF0F172A)],
                   ),
-                ],
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: hasMedia
+                    ? Image.network(
+                        message.mediaUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: const Color(0xFF1E1035),
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.photo_rounded, size: 40, color: AppColors.primaryNeon),
+                              SizedBox(height: 6),
+                              Text('Encrypted Photo 📸', style: TextStyle(fontSize: 11, color: Colors.white70)),
+                            ],
+                          ),
+                        ),
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primaryNeon,
+                              strokeWidth: 2,
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.image_rounded, size: 48, color: AppColors.primaryNeon),
+                            SizedBox(height: 6),
+                            Text(
+                              '🔒 Encrypted Photo',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
               ),
             ),
-            if (message.decryptedContent.isNotEmpty && message.decryptedContent != '[Attachment: image]') ...[
+            if (message.decryptedContent.isNotEmpty &&
+                message.decryptedContent != '[Attachment: image]' &&
+                !message.decryptedContent.startsWith('📸 Sent an encrypted photo')) ...[
               const SizedBox(height: 6),
               Text(
                 message.decryptedContent,
