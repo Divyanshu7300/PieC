@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:piec/core/services/spatial_audio_engine.dart';
 
 enum NotificationType {
   chatMessage,
@@ -32,6 +33,7 @@ class InAppNotificationItem {
 
 class NotificationService extends ChangeNotifier {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  final SpatialAudioEngine _audio = SpatialAudioEngine();
 
   String? _fcmToken;
   bool _notificationsEnabled = true;
@@ -106,6 +108,10 @@ class NotificationService extends ChangeNotifier {
     String? senderId,
   }) {
     if (!_notificationsEnabled) return;
+
+    if (_radarSoundsEnabled) {
+      _audio.playNotificationChime();
+    }
 
     final item = InAppNotificationItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),

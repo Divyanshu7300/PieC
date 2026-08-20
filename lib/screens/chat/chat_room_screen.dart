@@ -178,6 +178,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               stream: Provider.of<FirestoreChatService>(context, listen: false)
                   .messagesStream(currentUser.id, widget.friend.id, currentUser.id),
               builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final unreadFromFriend = snapshot.data!.any((m) => !m.isMine && !m.isRead);
+                  if (unreadFromFriend) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (context.mounted) {
+                        Provider.of<FirestoreChatService>(context, listen: false).markAsRead(
+                          currentUser.id,
+                          widget.friend.id,
+                          currentUser.id,
+                        );
+                      }
+                    });
+                  }
+                }
+
                 final displayMessages = (snapshot.hasData && snapshot.data!.isNotEmpty)
                     ? snapshot.data!
                     : messages;

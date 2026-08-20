@@ -109,8 +109,10 @@ class ChatBubble extends StatelessWidget {
                                 message.isRead
                                     ? Icons.done_all_rounded
                                     : Icons.done_rounded,
-                                size: 12,
-                                color: Colors.white,
+                                size: 13,
+                                color: message.isRead
+                                    ? const Color(0xFF38BDF8) // Glowing Cyan Blue for Seen
+                                    : Colors.white54, // Muted for Sent
                               ),
                             ],
                           ],

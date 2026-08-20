@@ -3,11 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:piec/core/models/call_session_model.dart';
 import 'package:piec/core/models/user_model.dart';
+import 'package:piec/core/services/spatial_audio_engine.dart';
 import 'package:uuid/uuid.dart';
 
 class CallService extends ChangeNotifier {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
+  final SpatialAudioEngine _audio = SpatialAudioEngine();
 
   CallSessionModel? _activeCall;
   CallSessionModel? _incomingCall;
@@ -53,7 +55,11 @@ class CallService extends ChangeNotifier {
             status: CallStatus.ringing,
             startTime: DateTime.now(),
           );
+          _audio.startRingtone();
         } else {
+          if (_incomingCall != null) {
+            _audio.stopRingtone();
+          }
           _incomingCall = null;
         }
         notifyListeners();
@@ -81,6 +87,7 @@ class CallService extends ChangeNotifier {
       startTime: DateTime.now(),
       isVideoOn: type == CallType.avatarVideo,
     );
+    _audio.startRingtone();
     notifyListeners();
 
     // 1. Write call session to Firestore
@@ -105,6 +112,8 @@ class CallService extends ChangeNotifier {
           final statusStr = data['status'] as String?;
           if (statusStr == 'connected' && _activeCall?.status == CallStatus.ringing) {
             _activeCall = _activeCall!.copyWith(status: CallStatus.connected);
+            _audio.playCallConnectedChime();
+            _audio.startCallVoiceStream();
             _startDurationTimer();
             notifyListeners();
           } else if (statusStr == 'declined' || statusStr == 'ended') {
@@ -122,6 +131,8 @@ class CallService extends ChangeNotifier {
     final call = _incomingCall!;
     _incomingCall = null;
     _activeCall = call.copyWith(status: CallStatus.connected);
+    _audio.playCallConnectedChime();
+    _audio.startCallVoiceStream();
     _startDurationTimer();
     notifyListeners();
 
@@ -149,6 +160,7 @@ class CallService extends ChangeNotifier {
     if (_incomingCall == null) return;
     final callId = _incomingCall!.callId;
     _incomingCall = null;
+    _audio.playCallHangupChime();
     notifyListeners();
 
     try {
@@ -216,6 +228,7 @@ class CallService extends ChangeNotifier {
   Future<void> endCall() async {
     _durationTimer?.cancel();
     _activeCallSub?.cancel();
+    _audio.playCallHangupChime();
 
     if (_activeCall != null) {
       final callId = _activeCall!.callId;
@@ -240,6 +253,7 @@ class CallService extends ChangeNotifier {
     _durationTimer?.cancel();
     _activeCallSub?.cancel();
     _incomingCallSub?.cancel();
+    _audio.playCallHangupChime();
     super.dispose();
   }
 }
