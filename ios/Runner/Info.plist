@@ -66,5 +66,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PieC needs your live GPS location to display your real-time 3D spatial avatar on the world map and calculate proximity distance to nearby friends.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PieC uses continuous background location to update your spatial proximity radar and convoy safety alerts when traveling with friends.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>PieC requires background location to keep friends connected on the spatial map.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PieC needs camera access to scan Snapcodes and take avatar selfies.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PieC needs microphone access for encrypted spatial voice calls and voice notes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PieC needs photo library access to share media in encrypted chats.</string>
 </dict>
 </plist>
