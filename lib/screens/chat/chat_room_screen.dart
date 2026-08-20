@@ -30,6 +30,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      if (auth.currentUser != null) {
+        Provider.of<FirestoreChatService>(context, listen: false).markAsRead(
+          auth.currentUser!.id,
+          widget.friend.id,
+          auth.currentUser!.id,
+        );
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();

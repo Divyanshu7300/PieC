@@ -471,15 +471,25 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
     FriendService friendService,
     FriendPrivacyAccess access,
   ) async {
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final firestoreChat = Provider.of<FirestoreChatService>(context, listen: false);
+    final chatService = Provider.of<ChatService>(context, listen: false);
+
     final acceptedUser = await friendService.acceptFriendRequest(req.id, access: access);
     if (acceptedUser != null && mounted) {
-      final chatService = Provider.of<ChatService>(context, listen: false);
+      final currentUid = auth.currentUser?.id ?? req.receiverId;
+      await firestoreChat.addFriendToFirestore(
+        currentUserId: currentUid,
+        friend: acceptedUser,
+      );
       if (!chatService.friends.any((f) => f.id == acceptedUser.id)) {
         chatService.friends.add(acceptedUser);
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connected with ${acceptedUser.name}! 🚀')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connected with ${acceptedUser.name}! 🚀')),
+        );
+      }
     }
   }
 

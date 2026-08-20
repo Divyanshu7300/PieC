@@ -8,6 +8,7 @@ import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/core/services/convoy_service.dart';
+import 'package:piec/core/services/firestore_chat_service.dart';
 import 'package:piec/core/services/location_service.dart';
 import 'package:piec/core/services/navigation_service.dart';
 import 'package:piec/core/services/sentinel_safety_service.dart';
@@ -123,7 +124,12 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
     final activeSquad = squadService.activeSquad;
 
     // Filter visible friends based on active squad
-    final List<UserModel> visibleFriends = chatService.friends.where((f) {
+    final allFriends = <UserModel>[];
+    for (final f in chatService.friends) {
+      if (!allFriends.any((e) => e.id == f.id)) allFriends.add(f);
+    }
+
+    final List<UserModel> visibleFriends = allFriends.where((f) {
       if (activeSquad == null) return true; // Show all
       return activeSquad.members.any((m) => m.id == f.id);
     }).toList();
