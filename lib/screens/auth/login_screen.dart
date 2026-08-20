@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/avatar_config.dart';
@@ -369,6 +370,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     lastActive: DateTime.now(),
                   );
                   await auth.saveCurrentUser(user);
+                  try {
+                    await FirebaseFirestore.instance.collection('users').doc(user.id).set(
+                      user.toFirestore(),
+                      SetOptions(merge: true),
+                    );
+                  } catch (e) {
+                    debugPrint('Firestore Quick Access save error: $e');
+                  }
                   if (mounted) {
                     Navigator.pushReplacement(
                       context,

@@ -539,6 +539,15 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
               future: Provider.of<FirestoreChatService>(context, listen: false)
                   .searchRegisteredUsers(_searchQuery, currentUser?.id ?? ''),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(color: AppColors.primaryNeon, strokeWidth: 2),
+                    ),
+                  );
+                }
+
                 final firestoreResults = snapshot.data ?? [];
                 final combined = [
                   ...searchResults,
@@ -553,12 +562,12 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
                         Text('🔍', style: TextStyle(fontSize: 36)),
                         SizedBox(height: 8),
                         Text(
-                          'No User Found with this Username or Phone',
+                          'No Other Users Found Yet',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Type a name, @username, or phone number to find registered users',
+                          'Open PieC on another phone to discover it here instantly!',
                           style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                         ),
                       ],
