@@ -79,8 +79,29 @@ class FirestoreChatService extends ChangeNotifier {
   Future<List<UserModel>> searchRegisteredUsers(String query, String currentUserId) async {
     final normalized = query.trim().toLowerCase().replaceFirst('@', '');
     if (normalized.isEmpty) return [];
-    final result = await _db.collection('users').where('usernameLower', isEqualTo: normalized).limit(10).get();
-    return result.docs.where((doc) => doc.id != currentUserId).map((doc) => UserModel.fromFirestore(doc.data(), doc.id)).toList();
+    try {
+      final snap = await _db.collection('users').limit(50).get();
+      final users = <UserModel>[];
+      for (final doc in snap.docs) {
+        if (doc.id == currentUserId) continue;
+        final data = doc.data();
+        final name = (data['name'] as String? ?? '').toLowerCase();
+        final username = (data['username'] as String? ?? '').toLowerCase();
+        final phone = (data['phone'] as String? ?? '').toLowerCase();
+        final email = (data['email'] as String? ?? '').toLowerCase();
+
+        if (username.contains(normalized) ||
+            name.contains(normalized) ||
+            phone.contains(normalized) ||
+            email.contains(normalized)) {
+          users.add(UserModel.fromFirestore(data, doc.id));
+        }
+      }
+      return users;
+    } catch (e) {
+      debugPrint('Error searching registered users: $e');
+      return [];
+    }
   }
 
   Stream<List<UserModel>> friendsStream(String userId) => _db.collection('users').doc(userId).collection('friends').orderBy('addedAt', descending: true).snapshots().map((snap) => snap.docs.map((doc) => UserModel.fromFirestore(doc.data(), doc.id)).toList());
