@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:piec/core/models/avatar_config.dart';
 import 'package:piec/core/models/location_point.dart';
 
@@ -163,6 +164,27 @@ class UserModel {
 
   // Firebase Firestore factory
   factory UserModel.fromFirestore(Map<String, dynamic> data, String uid) {
+    LocationPoint? firestoreLiveLocation;
+    final latitude = data['latitude'];
+    final longitude = data['longitude'];
+    if (latitude is num && longitude is num) {
+      firestoreLiveLocation = LocationPoint(
+        title: 'Live location',
+        address: data['lastKnownBeaconAddress'] ?? 'Live shared location',
+        latitude: latitude.toDouble(),
+        longitude: longitude.toDouble(),
+        type: LocationType.live,
+        updatedAt: data['lastSeen'] is Timestamp
+            ? (data['lastSeen'] as Timestamp).toDate()
+            : DateTime.now(),
+      );
+    }
+    LocationPoint? pointFromField(String field) {
+      final value = data[field];
+      if (value is Map) return LocationPoint.fromMap(Map<String, dynamic>.from(value));
+      return null;
+    }
+    firestoreLiveLocation ??= pointFromField('liveLocation');
     return UserModel(
       id: uid,
       name: data['name'] ?? 'PieC User',
@@ -172,6 +194,9 @@ class UserModel {
       avatarConfig: data['avatarConfig'] != null
           ? AvatarConfig.fromMap(Map<String, dynamic>.from(data['avatarConfig']))
           : const AvatarConfig(),
+      liveLocation: firestoreLiveLocation,
+      homeLocation: pointFromField('homeLocation'),
+      officeLocation: pointFromField('officeLocation'),
       statusText: data['statusText'] ?? 'On PieC',
       isOnline: data['isOnline'] ?? false,
       isGhostMode: data['isGhostMode'] ?? false,

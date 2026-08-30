@@ -1,17 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:piec/core/crypto/e2ee_engine.dart';
 import 'package:piec/core/models/avatar_config.dart';
 import 'package:piec/core/models/location_point.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/storage_service.dart';
-import 'package:uuid/uuid.dart';
 
 class AuthService extends ChangeNotifier {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
+  FirebaseAuth get _firebaseAuth => FirebaseAuth.instance;
   UserModel? _currentUser;
   bool _isLoading = false;
-  String? _verificationCode;
 
   UserModel? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
@@ -20,13 +20,32 @@ class AuthService extends ChangeNotifier {
   final StorageService _storage = StorageService();
   final E2EEEngine _crypto = E2EEEngine();
 
+  AuthService() {
+    _firebaseAuth.authStateChanges().listen((user) async {
+      if (user == null) {
+        _currentUser = null;
+      } else {
+        final profile = await _db.collection('users').doc(user.uid).get();
+        _currentUser = profile.exists && profile.data() != null
+            ? UserModel.fromFirestore(profile.data()!, user.uid)
+            : null;
+      }
+      notifyListeners();
+    });
+  }
+
   Future<void> init() async {
     _isLoading = true;
     notifyListeners();
 
-    _currentUser = await _storage.getCurrentUser();
-    if (_currentUser != null) {
-      _syncToFirestore(_currentUser!);
+    // Firebase Auth is the only identity source allowed to use cloud data.
+    // Local storage remains a cache and is never synced as a separate identity.
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      final profile = await _db.collection('users').doc(user.uid).get();
+      _currentUser = profile.exists && profile.data() != null
+          ? UserModel.fromFirestore(profile.data()!, user.uid)
+          : null;
     }
     _isLoading = false;
     notifyListeners();
@@ -49,7 +68,6 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     await Future.delayed(const Duration(milliseconds: 800));
-    _verificationCode = '123456'; // Default test OTP code
     _isLoading = false;
     notifyListeners();
     return true;
@@ -173,10 +191,24 @@ class AuthService extends ChangeNotifier {
   /// Update Username & Name
   Future<void> updateProfile({required String name, required String username}) async {
     if (_currentUser == null) return;
+    final normalizedUsername = username.trim().toLowerCase().replaceFirst('@', '');
+    if (!RegExp(r'^[a-z0-9_.]{3,30}$').hasMatch(normalizedUsername)) {
+      throw ArgumentError('Username must be 3–30 characters: letters, numbers, _ or .');
+    }
     _currentUser = _currentUser!.copyWith(
-      name: name,
-      username: username,
+      name: name.trim(),
+      username: normalizedUsername,
     );
+    if (_firebaseAuth.currentUser?.uid == _currentUser!.id) {
+      await _db.collection('users').doc(_currentUser!.id).set({
+        'uid': _currentUser!.id,
+        'name': _currentUser!.name,
+        'username': normalizedUsername,
+        'usernameLower': normalizedUsername,
+        'avatarConfig': _currentUser!.avatarConfig.toMap(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
     await _storage.saveCurrentUser(_currentUser!);
     notifyListeners();
   }
@@ -185,6 +217,12 @@ class AuthService extends ChangeNotifier {
   Future<void> updateAvatarConfig(AvatarConfig config) async {
     if (_currentUser == null) return;
     _currentUser = _currentUser!.copyWith(avatarConfig: config);
+    if (_firebaseAuth.currentUser?.uid == _currentUser!.id) {
+      await _db.collection('users').doc(_currentUser!.id).update({
+        'avatarConfig': config.toMap(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
     await _storage.saveCurrentUser(_currentUser!);
     notifyListeners();
   }
@@ -201,6 +239,14 @@ class AuthService extends ChangeNotifier {
       officeLocation: office ?? _currentUser!.officeLocation,
       liveLocation: live ?? _currentUser!.liveLocation,
     );
+    if (_firebaseAuth.currentUser?.uid == _currentUser!.id) {
+      await _db.collection('users').doc(_currentUser!.id).set({
+        if (home != null) 'homeLocation': home.toMap(),
+        if (office != null) 'officeLocation': office.toMap(),
+        if (live != null) 'liveLocation': live.toMap(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
     await _storage.saveCurrentUser(_currentUser!);
     notifyListeners();
   }
@@ -212,6 +258,13 @@ class AuthService extends ChangeNotifier {
       isGhostMode: enabled,
       privacyMode: enabled ? LocationPrivacyMode.ghost : _currentUser!.privacyMode,
     );
+    if (_firebaseAuth.currentUser?.uid == _currentUser!.id) {
+      await _db.collection('users').doc(_currentUser!.id).update({
+        'isGhostMode': enabled,
+        'locationPrivacyMode': _currentUser!.privacyMode.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
     await _storage.saveCurrentUser(_currentUser!);
     await _storage.setGhostMode(enabled);
     notifyListeners();
@@ -224,6 +277,13 @@ class AuthService extends ChangeNotifier {
       privacyMode: mode,
       isGhostMode: mode == LocationPrivacyMode.ghost,
     );
+    if (_firebaseAuth.currentUser?.uid == _currentUser!.id) {
+      await _db.collection('users').doc(_currentUser!.id).update({
+        'isGhostMode': mode == LocationPrivacyMode.ghost,
+        'locationPrivacyMode': mode.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
     await _storage.saveCurrentUser(_currentUser!);
     await _storage.setGhostMode(mode == LocationPrivacyMode.ghost);
     notifyListeners();
@@ -244,6 +304,12 @@ class AuthService extends ChangeNotifier {
   Future<void> updateStatus(String statusText) async {
     if (_currentUser == null) return;
     _currentUser = _currentUser!.copyWith(statusText: statusText);
+    if (_firebaseAuth.currentUser?.uid == _currentUser!.id) {
+      await _db.collection('users').doc(_currentUser!.id).update({
+        'statusText': statusText.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
     await _storage.saveCurrentUser(_currentUser!);
     notifyListeners();
   }

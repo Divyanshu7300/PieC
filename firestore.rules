@@ -1,8 +1,86 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isConversationMember(conversationId) {
+      return signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(conversationId)).data.participants;
+    }
+    function isConversationMemberAfter(conversationId) {
+      return signedIn() && request.auth.uid in getAfter(/databases/$(database)/documents/chats/$(conversationId)).data.participants;
+    }
+    function isFriends(otherUid) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)/friends/$(otherUid));
+    }
+
+    match /users/{userId} {
+      // Profiles are discoverable only by signed-in people. Never put precise
+      // location, private contact data, or device tokens in this document.
+      allow get, list: if signedIn();
+      allow create: if isSelf(userId) && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSelf(userId);
+
+      match /friends/{friendId} {
+        allow read: if isSelf(userId);
+        // The matching edge for the sender may only be made while accepting a
+        // still-pending request addressed to the authenticated recipient.
+        allow create: if isSelf(userId)
+          || (signedIn()
+              && request.resource.data.uid == request.auth.uid
+              && request.resource.data.requestId is string
+              && get(/databases/$(database)/documents/users/$(request.auth.uid)/friend_requests/$(request.resource.data.requestId)).data.receiverId == request.auth.uid
+              && get(/databases/$(database)/documents/users/$(request.auth.uid)/friend_requests/$(request.resource.data.requestId)).data.sender.id == userId);
+        allow delete: if isSelf(userId);
+        allow update: if false;
+      }
+
+      match /friend_requests/{requestId} {
+        allow read, delete: if isSelf(userId);
+        allow create: if signedIn()
+          && request.auth.uid == request.resource.data.sender.id
+          && userId == request.resource.data.receiverId
+          && request.resource.data.status == 'pending';
+        allow update: if isSelf(userId)
+          && request.resource.data.sender.id == resource.data.sender.id
+          && request.resource.data.receiverId == resource.data.receiverId;
+      }
+    }
+
+    match /chats/{conversationId} {
+      allow read: if isConversationMember(conversationId);
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants.size() == 2
+        && ((request.resource.data.participants[0] == request.auth.uid && isFriends(request.resource.data.participants[1]))
+          || (request.resource.data.participants[1] == request.auth.uid && isFriends(request.resource.data.participants[0])));
+      allow update: if isConversationMember(conversationId)
+        && request.resource.data.participants == resource.data.participants;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isConversationMember(conversationId);
+        allow create: if (isConversationMember(conversationId) || isConversationMemberAfter(conversationId))
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.receiverId in getAfter(/databases/$(database)/documents/chats/$(conversationId)).data.participants
+          && request.resource.data.createdAt == request.time;
+        allow update: if isConversationMember(conversationId)
+          && request.auth.uid == resource.data.receiverId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+        allow delete: if false;
+      }
+    }
+
+    match /calls/{callId} {
+      allow get, list: if signedIn()
+        && (request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.receiverId);
+      allow create: if signedIn()
+        && request.resource.data.callerId == request.auth.uid
+        && isFriends(request.resource.data.receiverId);
+      allow update: if signedIn()
+        && (request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.receiverId)
+        && request.resource.data.callerId == resource.data.callerId
+        && request.resource.data.receiverId == resource.data.receiverId;
+      allow delete: if false;
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/screens/main_navigation_screen.dart';
 import 'package:piec/widgets/avatar/avatar_customizer_modal.dart';
 import 'package:piec/widgets/avatar/gamified_avatar.dart';
@@ -40,6 +41,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final user = auth.currentUser;
 
     return Scaffold(
@@ -152,7 +154,18 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                       return;
                     }
 
-                    await auth.updateProfile(name: name, username: username);
+                    try {
+                      await firebaseAuth.completeProfile(
+                        name: name,
+                        username: username,
+                        avatarConfig: user?.avatarConfig.toMap(),
+                      );
+                    } on ArgumentError catch (error) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message?.toString() ?? 'Invalid profile')));
+                      }
+                      return;
+                    }
                     if (mounted) {
                       Navigator.pushReplacement(
                         context,

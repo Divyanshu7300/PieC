@@ -24,8 +24,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final crypto = E2EEEngine();
-    final safetyFingerprint = crypto.generateSafetyFingerprint(
+    final safetyFingerprint = E2EEEngine().generateSafetyFingerprint(
       widget.currentUser.id,
       widget.friendUser.id,
     );
@@ -62,7 +61,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             const SizedBox(height: 16),
 
             const Text(
-              'End-to-End Encrypted Chat',
+              'Chat security',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -71,7 +70,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Messages & calls with ${widget.friendUser.name} are secured with Zero-Knowledge encryption. No third party can read them.',
+              'Firebase protects data in transit and at rest. End-to-end encryption is not enabled in this version.',
               style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
@@ -114,7 +113,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       Icon(Icons.shield_outlined, size: 16, color: AppColors.primaryNeon),
                       SizedBox(width: 6),
                       Text(
-                        'E2EE SAFETY VERIFICATION',
+                        'SECURITY STATUS',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -137,15 +136,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _isCodeRevealed
-                              ? safetyFingerprint
-                              : '••••  ••••  ••••  ${safetyFingerprint.substring(safetyFingerprint.length - 4)}',
+                          _isCodeRevealed ? safetyFingerprint : '••••  ••••  ••••',
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: _isCodeRevealed ? 3 : 2,
-                            color: _isCodeRevealed ? AppColors.accentGreen : AppColors.textMuted,
+                            letterSpacing: 2,
+                            color: _isCodeRevealed ? AppColors.primaryNeon : AppColors.textMuted,
                           ),
                         ),
                       ],

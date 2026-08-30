@@ -117,9 +117,12 @@ class FirebaseAuthService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      final defaultUsername = 'user_${_firebaseUser!.uid.substring(0, 12)}';
       final data = {
         'uid': _firebaseUser!.uid,
         'name': name,
+        'username': defaultUsername,
+        'usernameLower': defaultUsername,
         'phone': phone,
         'statusText': 'On PieC',
         'isOnline': true,
@@ -136,6 +139,35 @@ class FirebaseAuthService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeProfile({
+    required String name,
+    required String username,
+    Map<String, dynamic>? avatarConfig,
+  }) async {
+    if (_firebaseUser == null) throw StateError('You must be signed in.');
+    final normalizedUsername = username.trim().toLowerCase().replaceFirst('@', '');
+    if (!RegExp(r'^[a-z0-9_.]{3,30}$').hasMatch(normalizedUsername)) {
+      throw ArgumentError('Username must be 3–30 characters: letters, numbers, _ or .');
+    }
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final data = {
+        'uid': _firebaseUser!.uid,
+        'name': name.trim(),
+        'username': normalizedUsername,
+        'usernameLower': normalizedUsername,
+        if (avatarConfig != null) 'avatarConfig': avatarConfig,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      await _firestore.collection('users').doc(_firebaseUser!.uid).set(data, SetOptions(merge: true));
+      await _loadUserProfile(_firebaseUser!.uid);
+    } finally {
       _isLoading = false;
       notifyListeners();
     }

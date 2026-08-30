@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/core/services/call_service.dart';
 import 'package:piec/core/services/friend_service.dart';
 import 'package:piec/core/services/theme_service.dart';
@@ -31,7 +32,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   void _ensureServicesInitialized() {
     final auth = Provider.of<AuthService>(context, listen: false);
-    final uid = auth.currentUser?.id;
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context, listen: false);
+    final uid = firebaseAuth.currentUser?.id ?? auth.currentUser?.id;
     if (uid != null && uid != _lastInitializedUid) {
       _lastInitializedUid = uid;
       Provider.of<CallService>(context, listen: false).init(uid);
@@ -86,9 +88,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
-                _buildNavItem(0, 'World Map', '🗺️', Icons.map_rounded, themeService),
-                _buildNavItem(1, 'E2EE Chats', '💬', Icons.chat_bubble_rounded, themeService),
-                _buildNavItem(2, 'My Identity', '👾', Icons.person_rounded, themeService),
+                _buildNavItem(0, 'Map', '🗺️', Icons.map_rounded, themeService),
+                _buildNavItem(1, 'Chats', '💬', Icons.chat_bubble_rounded, themeService),
+                _buildNavItem(2, 'Profile', '👾', Icons.person_rounded, themeService),
               ],
             ),
           ),
@@ -105,8 +107,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       child: InkWell(
         onTap: () => setState(() => _currentIndex = index),
         borderRadius: BorderRadius.circular(16),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(vertical: 6),
+          transform: Matrix4.identity()..translate(0.0, isSelected ? -2.0 : 0.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -118,10 +123,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Text(
-                  emoji,
-                  style: TextStyle(
-                    fontSize: isSelected ? 22 : 20,
+                child: AnimatedScale(
+                  duration: const Duration(milliseconds: 220),
+                  scale: isSelected ? 1.08 : 1,
+                  child: Text(
+                    emoji,
+                    style: TextStyle(
+                      fontSize: isSelected ? 22 : 20,
+                    ),
                   ),
                 ),
               ),

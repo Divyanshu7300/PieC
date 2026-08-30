@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piec/core/services/spatial_audio_engine.dart';
 
 enum NotificationType {
@@ -32,6 +33,9 @@ class InAppNotificationItem {
 }
 
 class NotificationService extends ChangeNotifier {
+  static const _notificationsKey = 'piec_notifications_enabled';
+  static const _radarSoundsKey = 'piec_radar_sounds_enabled';
+  static const _hapticsKey = 'piec_haptics_enabled';
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final SpatialAudioEngine _audio = SpatialAudioEngine();
 
@@ -55,6 +59,10 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> init() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _notificationsEnabled = prefs.getBool(_notificationsKey) ?? true;
+      _radarSoundsEnabled = prefs.getBool(_radarSoundsKey) ?? true;
+      _hapticsEnabled = prefs.getBool(_hapticsKey) ?? true;
       // 1. Request Apple iOS & Android 13+ Notification Permissions
       final settings = await _fcm.requestPermission(
         alert: true,
@@ -131,19 +139,25 @@ class NotificationService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setNotificationsEnabled(bool val) {
+  Future<void> setNotificationsEnabled(bool val) async {
     _notificationsEnabled = val;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_notificationsKey, val);
   }
 
-  void setRadarSoundsEnabled(bool val) {
+  Future<void> setRadarSoundsEnabled(bool val) async {
     _radarSoundsEnabled = val;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_radarSoundsKey, val);
   }
 
-  void setHapticsEnabled(bool val) {
+  Future<void> setHapticsEnabled(bool val) async {
     _hapticsEnabled = val;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hapticsKey, val);
   }
 
   @override

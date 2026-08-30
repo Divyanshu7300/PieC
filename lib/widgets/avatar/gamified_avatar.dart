@@ -124,6 +124,9 @@ class _GamifiedAvatarState extends State<GamifiedAvatar>
                   ),
                 ),
 
+              if (widget.showGlow && widget.config.auraEffect != AvatarAuraEffect.none)
+                _buildAuraParticles(phase, widget.size, widget.config.auraEffect),
+
               // 3D Perspective Rotated Avatar Body
               Transform(
                 alignment: Alignment.center,

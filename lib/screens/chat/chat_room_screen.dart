@@ -34,11 +34,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthService>(context, listen: false);
-      if (auth.currentUser != null) {
+      final firebaseAuth = Provider.of<FirebaseAuthService>(context, listen: false);
+      final currentUser = auth.currentUser ?? firebaseAuth.currentUser;
+      if (currentUser != null) {
         Provider.of<FirestoreChatService>(context, listen: false).markAsRead(
-          auth.currentUser!.id,
+          currentUser.id,
           widget.friend.id,
-          auth.currentUser!.id,
+          currentUser.id,
         );
       }
     });
@@ -66,8 +68,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final chatService = Provider.of<ChatService>(context);
-    final currentUser = auth.currentUser;
+    final currentUser = auth.currentUser ?? firebaseAuth.currentUser;
 
     if (currentUser == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -136,7 +139,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           // Security Lock Icon
           IconButton(
             icon: const Icon(Icons.shield_outlined, color: AppColors.primaryNeon),
-            tooltip: 'E2EE Safety Numbers',
+            tooltip: 'Chat security details',
             onPressed: () {
               Navigator.push(
                 context,
@@ -205,7 +208,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         const Icon(Icons.lock_outline_rounded, color: AppColors.primaryNeon, size: 36),
                         const SizedBox(height: 10),
                         const Text(
-                          'End-to-End Encrypted Chat',
+                          'Private Firebase Chat',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         const SizedBox(height: 4),
@@ -317,9 +320,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     child: TextField(
                       controller: _textController,
                       textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(currentUser.id, chatService),
+                      onSubmitted: (_) => _sendMessage(currentUser.id),
                       decoration: InputDecoration(
-                        hintText: 'End-to-End Encrypted message...',
+                        hintText: 'Write a message…',
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
@@ -337,7 +340,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             );
                             _scrollToBottom();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Encrypted Voice Note sent! 🎙️🔒')),
+                              const SnackBar(content: Text('Voice note sent! 🎙️')),
                             );
                           },
                         ),
@@ -354,7 +357,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.send_rounded, color: Colors.black, size: 20),
-                      onPressed: () => _sendMessage(currentUser.id, chatService),
+                      onPressed: () => _sendMessage(currentUser.id),
                     ),
                   ),
                 ],
@@ -385,25 +388,30 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  void _sendMessage(String currentUserId, ChatService chatService) {
+  Future<void> _sendMessage(String currentUserId) async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
     final firestoreChat = Provider.of<FirestoreChatService>(context, listen: false);
-    firestoreChat.sendMessage(
-      senderId: currentUserId,
-      receiverId: widget.friend.id,
-      text: text,
-    );
-
-    chatService.sendMessage(
-      currentUserId: currentUserId,
-      friendId: widget.friend.id,
-      text: text,
-    );
-
     _textController.clear();
     _scrollToBottom();
+    try {
+      // Firestore's local cache emits immediately, so this is optimistic while
+      // retaining a single source of truth instead of creating a duplicate
+      // local message.
+      await firestoreChat.sendMessage(
+        senderId: currentUserId,
+        receiverId: widget.friend.id,
+        text: text,
+      );
+    } catch (error) {
+      if (mounted) {
+        _textController.text = text;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Message was not sent: $error')),
+        );
+      }
+    }
   }
 
   void _showAttachmentSheet(BuildContext context, UserModel? currentUser, ChatService chatService) {
@@ -424,7 +432,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Share Encrypted Media & Location 📎',
+              'Share media & location 📎',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
@@ -463,7 +471,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     );
                     _scrollToBottom();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Encrypted Video sent! 🎥🔒')),
+                      const SnackBar(content: Text('Video sent! 🎥')),
                     );
                   },
                 ),
@@ -485,7 +493,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     );
                     _scrollToBottom();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Encrypted Document sent! 📄🔒')),
+                      const SnackBar(content: Text('Document sent! 📄')),
                     );
                   },
                 ),
@@ -590,7 +598,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Select Encrypted Photo 📸',
+                  'Select Photo 📸',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -628,7 +636,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       );
                       _scrollToBottom();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Encrypted ${item['title']} sent! 📸🔒')),
+                        SnackBar(content: Text('${item['title']} sent! 📸')),
                       );
                     },
                     child: Container(

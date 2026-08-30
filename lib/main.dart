@@ -84,13 +84,14 @@ class PieCApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firebaseAuth = Provider.of<FirebaseAuthService>(context);
-    final auth = Provider.of<AuthService>(context);
     final themeService = Provider.of<ThemeService>(context);
 
-    final isAuthenticated = firebaseAuth.isLoggedIn || auth.isAuthenticated;
+    // All cloud features require a real Firebase Auth session. The old local
+    // demo session must not unlock a screen that performs cloud writes.
+    final isAuthenticated = firebaseAuth.isLoggedIn;
 
     return MaterialApp(
-      title: 'PieC Spatial - Gamified Map & E2EE Chat',
+      title: 'PieC Spatial',
       debugShowCheckedModeBanner: false,
       theme: themeService.currentThemeData,
       home: DynamicIslandNotificationWrapper(
@@ -101,4 +102,3 @@ class PieCApp extends StatelessWidget {
     );
   }
 }
-

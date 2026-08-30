@@ -4,7 +4,6 @@ import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/friend_request_model.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
-import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/core/services/firestore_chat_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/core/services/friend_service.dart';
@@ -471,17 +470,10 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
     FriendService friendService,
     FriendPrivacyAccess access,
   ) async {
-    final auth = Provider.of<AuthService>(context, listen: false);
-    final firestoreChat = Provider.of<FirestoreChatService>(context, listen: false);
     final chatService = Provider.of<ChatService>(context, listen: false);
 
     final acceptedUser = await friendService.acceptFriendRequest(req.id, access: access);
     if (acceptedUser != null && mounted) {
-      final currentUid = auth.currentUser?.id ?? req.receiverId;
-      await firestoreChat.addFriendToFirestore(
-        currentUserId: currentUid,
-        friend: acceptedUser,
-      );
       if (!chatService.friends.any((f) => f.id == acceptedUser.id)) {
         chatService.friends.add(acceptedUser);
       }
@@ -621,13 +613,8 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
                           ),
                           ElevatedButton(
                             onPressed: () async {
-                              final currentUid = currentUser?.id ?? 'user_agent';
-                              final chatService = Provider.of<ChatService>(context, listen: false);
-                              final firestoreChatService = Provider.of<FirestoreChatService>(context, listen: false);
-                              chatService.addFriend(user, currentUid);
-                              await firestoreChatService.addFriendToFirestore(currentUserId: currentUid, friend: user);
                               if (currentUser != null) {
-                                friendService.sendFriendRequest(
+                                await friendService.sendFriendRequest(
                                   sender: currentUser,
                                   receiver: user,
                                   type: FriendRequestType.usernameSearch,
@@ -635,7 +622,7 @@ class _AddFriendsHubModalState extends State<AddFriendsHubModal> {
                               }
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Connected with ${user.name}! 🚀 You can now chat!')),
+                                  SnackBar(content: Text('Friend request sent to ${user.name}!')),
                                 );
                               }
                             },

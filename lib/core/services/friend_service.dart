@@ -1,17 +1,12 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:piec/core/crypto/e2ee_engine.dart';
 import 'package:piec/core/models/friend_request_model.dart';
 import 'package:piec/core/models/user_model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 class FriendService extends ChangeNotifier {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-  static const String _keyPendingRequests = 'piec_pending_requests';
-  final E2EEEngine _crypto = E2EEEngine();
-  final Uuid _uuid = const Uuid();
+  FirebaseAuth get _auth => FirebaseAuth.instance;
 
   List<FriendRequestModel> _pendingRequests = [];
   List<UserModel> _discoverableUsers = [];
@@ -25,6 +20,7 @@ class FriendService extends ChangeNotifier {
   int get pendingCount => _pendingRequests.length;
 
   Future<void> init(String currentUserId) async {
+    if (_auth.currentUser?.uid != currentUserId) return;
     _currentUserId = currentUserId;
     _discoverableUsers = [];
     _nearbyRadarUsers = [];
@@ -52,49 +48,23 @@ class FriendService extends ChangeNotifier {
     required UserModel targetUser,
     required String placeTitle,
   }) async {
-    final newRequest = FriendRequestModel(
-      id: _uuid.v4(),
+    await sendFriendRequest(
       sender: currentUser,
-      receiverId: targetUser.id,
+      receiver: targetUser,
       type: FriendRequestType.knockKnockMap,
       placeTitle: placeTitle,
-      timestamp: DateTime.now(),
     );
-
-    try {
-      await _db
-          .collection('users')
-          .doc(targetUser.id)
-          .collection('friend_requests')
-          .doc(newRequest.id)
-          .set(newRequest.toMap());
-    } catch (e) {
-      debugPrint('sendKnockKnock error: $e');
-    }
   }
 
   Future<void> sendRadarBump({
     required UserModel currentUser,
     required UserModel targetUser,
   }) async {
-    final newRequest = FriendRequestModel(
-      id: _uuid.v4(),
+    await sendFriendRequest(
       sender: currentUser,
-      receiverId: targetUser.id,
+      receiver: targetUser,
       type: FriendRequestType.nearbyRadar,
-      timestamp: DateTime.now(),
     );
-
-    try {
-      await _db
-          .collection('users')
-          .doc(targetUser.id)
-          .collection('friend_requests')
-          .doc(newRequest.id)
-          .set(newRequest.toMap());
-    } catch (e) {
-      debugPrint('sendRadarBump error: $e');
-    }
   }
 
   Future<void> sendFriendRequest({
@@ -102,53 +72,64 @@ class FriendService extends ChangeNotifier {
     required UserModel receiver,
     FriendRequestType type = FriendRequestType.usernameSearch,
     FriendPrivacyAccess privacyAccess = FriendPrivacyAccess.fullMapAccess,
+    String? placeTitle,
   }) async {
+    if (_auth.currentUser?.uid != sender.id) {
+      throw StateError('You must be signed in to send a friend request.');
+    }
+    if (sender.id == receiver.id) {
+      throw ArgumentError('You cannot add yourself as a friend.');
+    }
+    final requestId = '${sender.id}_${receiver.id}';
     final newRequest = FriendRequestModel(
-      id: _uuid.v4(),
+      id: requestId,
       sender: sender,
       receiverId: receiver.id,
       type: type,
+      placeTitle: placeTitle,
       privacyAccess: privacyAccess,
       timestamp: DateTime.now(),
     );
 
-    // Save to receiver's Firestore inbox
-    try {
-      await _db
-          .collection('users')
-          .doc(receiver.id)
-          .collection('friend_requests')
-          .doc(newRequest.id)
-          .set(newRequest.toMap());
-    } catch (e) {
-      debugPrint('Error sending friend request to Firestore: $e');
-    }
+    // A deterministic id prevents duplicate requests from repeated taps.
+    await _db.collection('users').doc(receiver.id).collection('friend_requests').doc(requestId).set({
+      ...newRequest.toMap(),
+      'id': requestId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<UserModel?> acceptFriendRequest(
     String requestId, {
     FriendPrivacyAccess access = FriendPrivacyAccess.fullMapAccess,
   }) async {
-    final index = _pendingRequests.indexWhere((r) => r.id == requestId);
-    if (index != -1) {
-      final req = _pendingRequests[index];
-      final sender = req.sender;
-      _pendingRequests.removeAt(index);
-      notifyListeners();
-
-      if (_currentUserId != null) {
-        try {
-          await _db
-              .collection('users')
-              .doc(_currentUserId!)
-              .collection('friend_requests')
-              .doc(requestId)
-              .delete();
-        } catch (_) {}
-      }
-      return sender;
+    final currentUid = _currentUserId;
+    if (currentUid == null || _auth.currentUser?.uid != currentUid) {
+      throw StateError('You must be signed in to accept a friend request.');
     }
-    return null;
+    final index = _pendingRequests.indexWhere((r) => r.id == requestId);
+    if (index == -1) return null;
+    final req = _pendingRequests[index];
+    final requestRef = _db.collection('users').doc(currentUid).collection('friend_requests').doc(requestId);
+    final ownFriendRef = _db.collection('users').doc(currentUid).collection('friends').doc(req.sender.id);
+    final peerFriendRef = _db.collection('users').doc(req.sender.id).collection('friends').doc(currentUid);
+    final myProfile = await _db.collection('users').doc(currentUid).get();
+    if (!myProfile.exists) throw StateError('Your profile is not ready yet.');
+
+    await _db.runTransaction((transaction) async {
+      final requestSnapshot = await transaction.get(requestRef);
+      if (!requestSnapshot.exists) throw StateError('This friend request has already been handled.');
+      final data = requestSnapshot.data()!;
+      if (data['receiverId'] != currentUid || (data['sender'] as Map?)?['id'] != req.sender.id) {
+        throw StateError('Invalid friend request.');
+      }
+      transaction.set(ownFriendRef, _friendSnapshot(req.sender, requestId, access));
+      transaction.set(peerFriendRef, _friendSnapshot(UserModel.fromFirestore(myProfile.data()!, currentUid), requestId, access));
+      transaction.delete(requestRef);
+    });
+    _pendingRequests.removeAt(index);
+    notifyListeners();
+    return req.sender;
   }
 
   Future<void> declineFriendRequest(String requestId) async {
@@ -180,4 +161,12 @@ class FriendService extends ChangeNotifier {
   }
 
   List<UserModel> searchFriends(String query) => searchUsers(query);
+
+  Map<String, dynamic> _friendSnapshot(UserModel user, String requestId, FriendPrivacyAccess access) => {
+    ...user.toFirestore(),
+    'uid': user.id,
+    'requestId': requestId,
+    'privacyAccess': access.name,
+    'addedAt': FieldValue.serverTimestamp(),
+  };
 }

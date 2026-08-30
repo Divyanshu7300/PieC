@@ -4,6 +4,7 @@ import 'package:piec/core/constants/app_colors.dart';
 import 'package:piec/core/models/call_session_model.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
+import 'package:piec/core/services/firebase_auth_service.dart';
 import 'package:piec/core/services/call_service.dart';
 import 'package:piec/core/services/chat_service.dart';
 import 'package:piec/core/services/firestore_chat_service.dart';
@@ -37,10 +38,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final chatService = Provider.of<ChatService>(context);
     final friendService = Provider.of<FriendService>(context);
     final firestoreChat = Provider.of<FirestoreChatService>(context);
-    final currentUserId = auth.currentUser?.id ?? '';
+    final currentUserId = firebaseAuth.currentUser?.id ?? auth.currentUser?.id ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -50,7 +52,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               shaderCallback: (bounds) =>
                   AppColors.primaryGradient.createShader(bounds),
               child: const Text(
-                'Encrypted Chats',
+                'Chats',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
             ),
@@ -63,7 +65,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 border: Border.all(color: AppColors.primaryNeon.withOpacity(0.3)),
               ),
               child: const Text(
-                'E2EE 🔒',
+                'Private 🔒',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,

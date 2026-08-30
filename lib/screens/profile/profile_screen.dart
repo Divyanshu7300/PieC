@@ -4,6 +4,7 @@ import 'package:piec/core/models/location_point.dart';
 import 'package:piec/core/models/user_model.dart';
 import 'package:piec/core/services/auth_service.dart';
 import 'package:piec/core/services/firebase_auth_service.dart';
+import 'package:piec/core/services/notification_service.dart';
 import 'package:piec/core/services/theme_service.dart';
 import 'package:piec/screens/auth/login_screen.dart';
 import 'package:piec/screens/map/set_location_screen.dart';
@@ -19,17 +20,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _notificationsEnabled = true;
-  bool _radarSoundsEnabled = true;
-  bool _hapticsEnabled = true;
-
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
     final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final themeService = Provider.of<ThemeService>(context);
+    final notifications = Provider.of<NotificationService>(context);
 
-    final user = firebaseAuth.currentUser ?? auth.currentUser;
+    final user = auth.currentUser ?? firebaseAuth.currentUser;
     final activeUser = user ??
         UserModel(
           id: 'user_${DateTime.now().millisecondsSinceEpoch}',
@@ -109,15 +107,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildModernTile(
                   icon: Icons.key_rounded,
                   iconColor: const Color(0xFF10B981),
-                  title: "End-to-End Encryption Keys",
-                  subtitle: "AES-256 GCM Client-Side Zero-Knowledge",
+                  title: "Chat Security",
+                  subtitle: "Firebase protection in transit and at rest",
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981).withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text("VERIFIED", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                    child: const Text("PROTECTED", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
                   ),
                 ),
               ],
@@ -229,24 +227,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               borderColor: borderColor,
               children: [
                 SwitchListTile.adaptive(
-                  value: _notificationsEnabled,
-                  onChanged: (v) => setState(() => _notificationsEnabled = v),
+                  value: notifications.notificationsEnabled,
+                  onChanged: notifications.setNotificationsEnabled,
                   activeColor: primary,
                   title: const Text("Direct Messages", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: const Text("Receive instant E2EE chat alerts", style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                  subtitle: const Text("Receive instant chat alerts", style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 ),
                 _buildDivider(borderColor),
                 SwitchListTile.adaptive(
-                  value: _radarSoundsEnabled,
-                  onChanged: (v) => setState(() => _radarSoundsEnabled = v),
+                  value: notifications.radarSoundsEnabled,
+                  onChanged: notifications.setRadarSoundsEnabled,
                   activeColor: primary,
                   title: const Text("Proximity Radar Audio", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   subtitle: const Text("Audio sweep sound when friends are within 500m", style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 ),
                 _buildDivider(borderColor),
                 SwitchListTile.adaptive(
-                  value: _hapticsEnabled,
-                  onChanged: (v) => setState(() => _hapticsEnabled = v),
+                  value: notifications.hapticsEnabled,
+                  onChanged: notifications.setHapticsEnabled,
                   activeColor: primary,
                   title: const Text("Haptic Vibrations", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   subtitle: const Text("Taptic feedback on knocks & bumps", style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
@@ -302,9 +300,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
-                            Text("PieC Spatial v2.4.0 Flagship", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text("PieC Spatial v1.0", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             SizedBox(height: 2),
-                            Text("Gamified 3D Map, Proximity Radar & E2EE Chat", style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            Text("Live map, proximity radar & private chat", style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                           ],
                         ),
                       ),

@@ -46,6 +46,10 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
   bool _isSearching = false;
   bool _showSearchResults = false;
   Timer? _debounceTimer;
+  StreamSubscription<List<UserModel>>? _friendsSubscription;
+  StreamSubscription<List<UserModel>>? _liveFriendsSubscription;
+  List<UserModel> _cloudFriends = [];
+  String? _watchedUserId;
 
   final LatLng _initialCenter = const LatLng(28.6150, 77.2100);
 
@@ -57,9 +61,29 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
 
   @override
   void dispose() {
+    _friendsSubscription?.cancel();
+    _liveFriendsSubscription?.cancel();
     _searchController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _watchFriends(String? userId) {
+    if (userId == null || userId == _watchedUserId) return;
+    _watchedUserId = userId;
+    _friendsSubscription?.cancel();
+    _friendsSubscription = Provider.of<FirestoreChatService>(context, listen: false)
+        .friendsStream(userId).listen((friends) {
+      final ids = friends.map((friend) => friend.id).toList();
+      _liveFriendsSubscription?.cancel();
+      if (ids.isEmpty) {
+        if (mounted) setState(() => _cloudFriends = []);
+        return;
+      }
+      _liveFriendsSubscription = _locationService.streamLiveFriends(ids).listen((liveFriends) {
+        if (mounted) setState(() => _cloudFriends = liveFriends);
+      });
+    });
   }
 
   Future<void> _initLiveGps() async {
@@ -115,10 +139,23 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
+    final firebaseAuth = Provider.of<FirebaseAuthService>(context);
     final chatService = Provider.of<ChatService>(context);
+    final locationService = Provider.of<LocationService>(context);
     final squadService = Provider.of<SquadService>(context);
     final themeService = Provider.of<ThemeService>(context);
-    final currentUser = auth.currentUser;
+    final storedUser = auth.currentUser ?? firebaseAuth.currentUser;
+    final currentUser = storedUser != null && locationService.currentPosition != null
+        ? storedUser.copyWith(liveLocation: LocationPoint(
+            title: 'Current location',
+            address: locationService.currentAddress,
+            latitude: locationService.currentPosition!.latitude,
+            longitude: locationService.currentPosition!.longitude,
+            type: LocationType.live,
+            updatedAt: DateTime.now(),
+          ))
+        : storedUser;
+    _watchFriends(currentUser?.id);
     final isGhostMode = currentUser?.isGhostMode ?? false;
 
     final activeSquad = squadService.activeSquad;
@@ -126,6 +163,9 @@ class _WorldMapScreenState extends State<WorldMapScreen> {
     // Filter visible friends based on active squad
     final allFriends = <UserModel>[];
     for (final f in chatService.friends) {
+      if (!allFriends.any((e) => e.id == f.id)) allFriends.add(f);
+    }
+    for (final f in _cloudFriends) {
       if (!allFriends.any((e) => e.id == f.id)) allFriends.add(f);
     }
 
