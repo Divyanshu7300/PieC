@@ -63,26 +63,28 @@ class NotificationService extends ChangeNotifier {
       _notificationsEnabled = prefs.getBool(_notificationsKey) ?? true;
       _radarSoundsEnabled = prefs.getBool(_radarSoundsKey) ?? true;
       _hapticsEnabled = prefs.getBool(_hapticsKey) ?? true;
-      // 1. Request Apple iOS & Android 13+ Notification Permissions
-      final settings = await _fcm.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: true,
-        provisional: false,
-        sound: true,
-      );
+      if (!kIsWeb) {
+        // 1. Request Apple iOS & Android 13+ Notification Permissions
+        final settings = await _fcm.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: true,
+          provisional: false,
+          sound: true,
+        );
 
-      _notificationsEnabled =
-          settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional;
+        _notificationsEnabled =
+            settings.authorizationStatus == AuthorizationStatus.authorized ||
+            settings.authorizationStatus == AuthorizationStatus.provisional;
 
-      debugPrint('FCM Notification permission status: ${settings.authorizationStatus}');
+        debugPrint('FCM Notification permission status: ${settings.authorizationStatus}');
 
-      // 2. Get Device FCM Token
-      _fcmToken = await _fcm.getToken();
-      debugPrint('Device FCM Token: $_fcmToken');
+        // 2. Get Device FCM Token
+        _fcmToken = await _fcm.getToken();
+        debugPrint('Device FCM Token: $_fcmToken');
+      }
 
       // 3. Listen to Foreground Messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
